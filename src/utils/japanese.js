@@ -1,4 +1,5 @@
 import kuromoji from 'kuromoji';
+import { resolveLexicalUnits } from './lexer.js';
 
 let _tokenizer = null;
 let _building = null;
@@ -35,15 +36,47 @@ export function hasJapanese(text) {
   return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
 }
 
+// Split joined text into sentence-level blocks for display.
+// Splits after Japanese sentence-ending punctuation, keeping the marker with its sentence.
+function splitSentences(text) {
+  const marked = text.replace(/([。！？…」』])/g, '$1\0');
+  return marked.split('\0').map(s => s.trim()).filter(s => s.length > 0);
+}
+
 export async function tokenizeLines(text) {
   const tokenizer = await getTokenizer();
+  if (!text?.trim()) return [];
 
-  const lines = text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  // Step 1 — split into paragraph blocks on blank lines.
+  // Blank lines represent genuine structural breaks; single newlines may be
+  // OCR/layout artifacts that should not fragment the resolver's input.
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0);
 
-  if (lines.length === 0) return [];
+  // If there are no blank lines the entire text is one block.
+  const blocks = paragraphs.length > 0 ? paragraphs : [text.trim()];
 
-  return lines.map((line) => tokenizer.tokenize(line));
+  const result = [];
+  for (const block of blocks) {
+    // Step 2 — join sublines within the block so the resolver always receives
+    // a complete, unfragmented chunk of text, not a raw OCR line slice.
+    const joined = block
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0)
+      .join('');
+
+    // Step 3 — split into sentence-level units for display.
+    // Each sentence becomes one <p> in the UI.
+    for (const sentence of splitSentences(joined)) {
+      result.push(resolveLexicalUnits(tokenizer.tokenize(sentence)));
+    }
+
+    // If the block had no sentence-ending punctuation, splitSentences returns
+    // the whole joined block as one entry — that's the correct fallback.
+  }
+
+  return result;
 }

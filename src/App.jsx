@@ -14,6 +14,7 @@ export default function App() {
   const [status, setStatus] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
   const [tokenLines, setTokenLines] = useState([]);
+  const [cleanText, setCleanText] = useState('');
   const [translation, setTranslation] = useState('');
   const [selectedToken, setSelectedToken] = useState(null);
   const [showSaved, setShowSaved] = useState(false);
@@ -30,7 +31,7 @@ export default function App() {
     setError(null);
 
     let rawText = '';
-    let cleanText = '';
+    let normalizedText = '';
     let translation = '';
 
     try {
@@ -64,22 +65,23 @@ export default function App() {
         setStatus('Scanning…');
         const result = await extractTextFromImage(file);
         rawText = result.japanese;
-        cleanText = result.japanese; // Claude Vision output is already clean
+        normalizedText = result.japanese; // Claude Vision output is already clean
         translation = result.translation;
       } else {
         rawText = visionResult.fullText;
         setStatus('Cleaning up text…');
-        cleanText = await cleanOCRText(preprocessOCRText(rawText));
+        normalizedText = await cleanOCRText(preprocessOCRText(rawText));
         setStatus('Translating…');
-        translation = await translateText(cleanText);
+        translation = await translateText(normalizedText);
       }
 
-      if (!cleanText || !hasJapanese(cleanText)) {
+      if (!normalizedText || !hasJapanese(normalizedText)) {
         throw new Error('No Japanese text detected in this image.');
       }
 
       setStatus('Processing text…');
-      const lines = await tokenizeLines(cleanText);
+      setCleanText(normalizedText);
+      const lines = await tokenizeLines(normalizedText);
 
       setTokenLines(lines);
       setTranslation(translation);
@@ -102,6 +104,7 @@ export default function App() {
     if (imageSrc) URL.revokeObjectURL(imageSrc);
     setImageSrc(null);
     setTokenLines([]);
+    setCleanText('');
     setTranslation('');
     setSelectedToken(null);
     setPhase('upload');
