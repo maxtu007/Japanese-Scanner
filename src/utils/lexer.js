@@ -13,6 +13,7 @@
  */
 
 import { toHiragana } from './japanese.js';
+import { matchLexicon } from './lexicon.js';
 
 // ─── Unit construction ────────────────────────────────────────────────────────
 
@@ -119,12 +120,33 @@ function nounContinues(_group, next) {
  * @returns {object[]} LexicalUnit array
  */
 export function resolveLexicalUnits(tokens) {
+  // Pre-compute all lexicon matches for this sentence.
+  // These represent dictionary-known compound units and take priority over
+  // the POS-rule patterns below.
+  const lexiconHits = matchLexicon(tokens);
+
   const result = [];
   let i = 0;
 
   while (i < tokens.length) {
     const t = tokens[i];
     const next = tokens[i + 1] ?? null;
+
+    // ── Lexicon override ─────────────────────────────────────────────────────
+    // A known compound starts here — use the dictionary entry as the unit.
+    const hit = lexiconHits.get(i);
+    if (hit) {
+      const baseGroup = tokens.slice(i, i + hit.length);
+      i += hit.length;
+      // After the compound, continue absorbing auxiliaries and te-form chains
+      // just as we would for any verb group (handles 走り出した, 食べ始めている, etc.)
+      const group = [...baseGroup];
+      while (i < tokens.length && verbContinues(group, tokens[i])) {
+        group.push(tokens[i++]);
+      }
+      result.push(makeUnit(group, hit.lemma));
+      continue;
+    }
 
     // ── Pattern 1: Verb ──────────────────────────────────────────────────────
     if (t.pos === '動詞') {
