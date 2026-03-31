@@ -32,6 +32,7 @@ function makeSpan(units, reason) {
   const endIndex     = units[units.length - 1].endIndex;
   const partOfSpeech = units[0].partOfSpeech;
   const sourceTokens = units.flatMap(u => u.sourceTokens);
+  const type         = units[0].type ?? 'other';
 
   return {
     surfaceForm,
@@ -41,6 +42,7 @@ function makeSpan(units, reason) {
     startIndex,
     endIndex,
     sourceTokens,
+    type,
     // Backward-compat aliases required by TextDisplay, WordModal, App
     surface_form: surfaceForm,
     basic_form:   lemma,
@@ -135,6 +137,9 @@ function checkNounCompound(left, right) {
 // ── Master dispatcher ─────────────────────────────────────────────────────────
 
 function shouldMerge(left, right) {
+  // Grammar patterns are never absorbed into noun compounds or prefix spans.
+  if (left.type === 'grammar' || right.type === 'grammar') return null;
+
   // Hard guards: particles, punctuation, and auxiliaries can never be merged into
   if (right.pos === '助詞')   return null;
   if (right.pos === '記号')   return null;

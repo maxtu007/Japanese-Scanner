@@ -57,9 +57,25 @@ function isSuruFamilyVerb(token) {
   return token.pos === '動詞' && SURU_FAMILY.has(token.basic_form);
 }
 
+// ─── Type inference ────────────────────────────────────────────────────────────
+
+function inferType(headToken) {
+  switch (headToken.pos) {
+    case '動詞':   return 'verb';
+    case '名詞':   return 'noun';
+    case '形容詞': return 'i-adjective';
+    case '助詞':   return 'particle';
+    case '助動詞': return 'auxiliary';
+    case '記号':   return 'punctuation';
+    case '副詞':   return 'adverb';
+    case '接頭詞': return 'prefix';
+    default:       return 'other';
+  }
+}
+
 // ─── Unit construction ────────────────────────────────────────────────────────
 
-function makeUnit(tokens, lemmaOverride) {
+function makeUnit(tokens, lemmaOverride, typeOverride) {
   const head = tokens[0];
   const last = tokens[tokens.length - 1];
 
@@ -86,6 +102,7 @@ function makeUnit(tokens, lemmaOverride) {
     startIndex,
     endIndex,
     sourceTokens: tokens,
+    type: typeOverride ?? inferType(head),
 
     // Backward-compat aliases (used by TextDisplay, WordModal, App)
     surface_form: surfaceForm,
@@ -181,7 +198,7 @@ function nounContinues(_group, next) {
  * @param {object[]} tokens — raw kuromoji tokens for one line
  * @returns {object[]} LexicalUnit array
  */
-export function resolveLexicalUnits(tokens) {
+export function resolveLexicalUnits(tokens, patternHits = new Map()) {
   // Pre-compute all lexicon matches for this sentence.
   // These represent dictionary-known compound units and take priority over
   // the POS-rule patterns below.
@@ -193,6 +210,23 @@ export function resolveLexicalUnits(tokens) {
   while (i < tokens.length) {
     const t = tokens[i];
     const next = tokens[i + 1] ?? null;
+
+    // ── Grammar pattern (locked construction) ────────────────────────────────
+    // Checked first — grammar patterns represent multi-token functional
+    // expressions (ことになる, てもいい, etc.) that must not be broken by
+    // lower-priority rules. After locking the base span, verbContinues
+    // absorbs any conjugational tail (e.g. ことになった absorbs た).
+    const phit = patternHits.get(i);
+    if (phit) {
+      const baseGroup = tokens.slice(i, i + phit.length);
+      i += phit.length;
+      const group = [...baseGroup];
+      while (i < tokens.length && verbContinues(group, tokens[i])) {
+        group.push(tokens[i++]);
+      }
+      result.push(makeUnit(group, phit.lemma, 'grammar'));
+      continue;
+    }
 
     // ── Lexicon override ─────────────────────────────────────────────────────
     // A known compound starts here — use the dictionary entry as the unit.
@@ -206,7 +240,7 @@ export function resolveLexicalUnits(tokens) {
       while (i < tokens.length && verbContinues(group, tokens[i])) {
         group.push(tokens[i++]);
       }
-      result.push(makeUnit(group, hit.lemma));
+      result.push(makeUnit(group, hit.lemma, 'compound-verb'));
       continue;
     }
 
@@ -241,7 +275,7 @@ export function resolveLexicalUnits(tokens) {
       }
       // Lemma is the stem itself (basic_form is often '*' for these)
       const lemma = (t.basic_form && t.basic_form !== '*') ? t.basic_form : t.surface_form;
-      result.push(makeUnit(group, lemma));
+      result.push(makeUnit(group, lemma, 'na-adjective'));
       continue;
     }
 
@@ -278,7 +312,7 @@ export function resolveLexicalUnits(tokens) {
       while (i < tokens.length && verbContinues(group, tokens[i])) {
         group.push(tokens[i++]);
       }
-      result.push(makeUnit(group, t.surface_form + 'する'));
+      result.push(makeUnit(group, t.surface_form + 'する', 'suru-verb'));
       continue;
     }
 

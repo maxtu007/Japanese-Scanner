@@ -1,5 +1,6 @@
 import kuromoji from 'kuromoji';
 import { resolveLexicalUnits } from './lexer.js';
+import { matchPatterns } from './patternMatcher.js';
 import { resolveSpans } from './spanResolver.js';
 
 let _tokenizer = null;
@@ -72,7 +73,9 @@ export async function tokenizeLines(text) {
     // Step 3 — split into sentence-level units for display.
     // Each sentence becomes one <p> in the UI.
     for (const sentence of splitSentences(joined)) {
-      const rawUnits = resolveLexicalUnits(tokenizer.tokenize(sentence));
+      const tokens      = tokenizer.tokenize(sentence);
+      const patternHits = matchPatterns(tokens);
+      const rawUnits    = resolveLexicalUnits(tokens, patternHits);
       result.push(resolveSpans(rawUnits, sentence));
     }
 
