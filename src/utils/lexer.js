@@ -8,12 +8,54 @@
  *   1. Verbs               — absorb auxiliaries + te-form chains
  *   2. I-adjectives        — absorb auxiliaries
  *   3. Na-adjective stems  — absorb copula forms + adverbial に
- *   4. Suru-verb compounds — merge サ変接続 noun + する conjugation
+ *   4. Suru-verb compounds — merge noun + する-family conjugation
  *   5. Nouns               — absorb suffixes and counters
+ *
+ * ─── Lexical architecture ───────────────────────────────────────────────────
+ *
+ * Two-tier knowledge model:
+ *
+ *   Tier A — POS-rule patterns (this file)
+ *     The primary scalable mechanism. Kuromoji's own POS tags (サ変接続,
+ *     動詞, 助動詞, etc.) ARE the lexical knowledge. Pattern 4 covers ALL
+ *     suru-verbs — active, passive (される), causative (させる), potential
+ *     (できる) — without any manual word list.  Adding new suru-verbs to the
+ *     language is automatically handled as long as kuromoji tags them
+ *     サ変接続.
+ *
+ *   Tier B — compound-verbs.json lexicon (lexicon.js)
+ *     Used only for V+V compounds (走り出す, 食べ始める, etc.) where two
+ *     independent verb stems join into one unit.  POS rules cannot reliably
+ *     detect these because both components have independent verb POS tags.
+ *     This list is intentionally small and focused — it is NOT the right
+ *     place to grow suru-verb or conjugation coverage.
+ *
+ * To improve coverage: extend POS patterns here, not the compound JSON.
  */
 
 import { toHiragana } from './japanese.js';
 import { matchLexicon } from './lexicon.js';
+
+// ─── Suru-verb family ─────────────────────────────────────────────────────────
+//
+// Kuromoji can return any of these as basic_form for the verbal token that
+// immediately follows a suru-verb noun stem:
+//
+//   する   — active base form           (推奨する, 説明する)
+//   される  — passive derived form        (推奨されています)
+//   させる  — causative derived form       (参加させる)
+//   できる  — potential derived form       (確認できる)
+//
+// Depending on the kuromoji/IPAdic version, the passive される may tokenize as
+// either a single token (され, basic_form=される) OR as two tokens
+// (さ basic_form=する + れ 助動詞).  Both paths are handled: the single-token
+// path is covered by SURU_FAMILY; the two-token path by basic_form=する.
+
+const SURU_FAMILY = new Set(['する', 'される', 'させる', 'できる']);
+
+function isSuruFamilyVerb(token) {
+  return token.pos === '動詞' && SURU_FAMILY.has(token.basic_form);
+}
 
 // ─── Unit construction ────────────────────────────────────────────────────────
 
@@ -64,6 +106,26 @@ function verbContinues(group, next) {
   if (next.pos === '助詞' && (next.surface_form === 'て' || next.surface_form === 'で')) {
     return true;
   }
+
+  // Absorb ながら (simultaneous action: "while V-ing") — part of the verb unit
+  if (next.pos === '助詞' && next.surface_form === 'ながら') return true;
+
+  // Absorb bound suffix verbs (動詞,接尾): passive れる, causative せる/させる,
+  // potential られる, etc.  These are morphological suffixes in IPAdic — they
+  // are never independent words and always belong to the preceding verb stem.
+  // This is the general fix for: される, させる, させられる, etc.
+  //   推奨さ + れ(動詞,接尾) → continues → 推奨され…
+  //   参加さ + せ(動詞,接尾) + られ(動詞,接尾) → continues → 参加させられ…
+  if (next.pos === '動詞' && next.pos_detail_1 === '接尾') return true;
+
+  // Absorb non-independent verbs (動詞,非自立) that directly follow a verb stem.
+  // This covers V+V compound second components that kuromoji splits because it
+  // doesn't have them as compound dictionary entries: 続ける, 始める, 終わる, etc.
+  //   走り(動詞,自立) + 続ける(動詞,非自立) → one unit
+  //   書き(動詞,自立) + 始める(動詞,非自立) → one unit
+  // NOTE: this rule is scoped to last.pos === '動詞' so it does NOT fire for the
+  // て-chain case (last = て/助詞), which is handled by the rule below.
+  if (next.pos === '動詞' && next.pos_detail_1 === '非自立' && last.pos === '動詞') return true;
 
   // A verb that directly follows a て/で connector continues the chain
   // (e.g. ている, てしまう, てみる, ておく, てくる, ていく)
@@ -184,19 +246,38 @@ export function resolveLexicalUnits(tokens) {
     }
 
     // ── Pattern 4: Suru-verb compound ────────────────────────────────────────
-    if (
-      t.pos === '名詞' &&
-      t.pos_detail_1 === 'サ変接続' &&
-      next?.pos === '動詞' &&
-      next?.basic_form === 'する'
-    ) {
-      // Absorb the する-form verb, then continue with verb rules
+    //
+    // Two acceptance tiers (see architecture note at top of file):
+    //
+    //   Tier 1 — kuromoji-verified サ変接続 nouns
+    //     Accept the full する-family (する, される, させる, できる).
+    //     This covers active, passive, causative, and potential voices of any
+    //     suru-verb that kuromoji knows — without any word list.
+    //     e.g. 推奨されています, 参加させられます, 確認できました
+    //
+    //   Tier 2 — general nouns (≥ 2 chars) + する
+    //     Conservative heuristic for nouns kuromoji didn't tag サ変接続
+    //     (neologisms, loanwords, domain terms).  Restricted to basic する
+    //     only to limit false positives.
+    //     e.g. アクセスする, キャンセルする
+    //
+    // Lemma is always normalized to the active dictionary form (stem + する)
+    // so Jisho lookup works regardless of which voice was used.
+
+    const isSuruNoun = t.pos === '名詞' && (
+      // Tier 1: kuromoji-verified + any する-family form
+      (t.pos_detail_1 === 'サ変接続' && next && isSuruFamilyVerb(next)) ||
+      // Tier 2: any multi-char noun + plain する
+      (t.pos_detail_1 !== 'サ変接続' && t.surface_form.length >= 2 &&
+       next?.pos === '動詞' && next?.basic_form === 'する')
+    );
+
+    if (isSuruNoun) {
       const group = [t, next];
       i += 2;
       while (i < tokens.length && verbContinues(group, tokens[i])) {
         group.push(tokens[i++]);
       }
-      // Lemma = noun + する (e.g. 勉強する, 説明する)
       result.push(makeUnit(group, t.surface_form + 'する'));
       continue;
     }
