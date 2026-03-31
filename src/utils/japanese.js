@@ -1,5 +1,6 @@
 import kuromoji from 'kuromoji';
 import { resolveLexicalUnits } from './lexer.js';
+import { resolveSpans } from './spanResolver.js';
 
 let _tokenizer = null;
 let _building = null;
@@ -71,7 +72,8 @@ export async function tokenizeLines(text) {
     // Step 3 — split into sentence-level units for display.
     // Each sentence becomes one <p> in the UI.
     for (const sentence of splitSentences(joined)) {
-      result.push(resolveLexicalUnits(tokenizer.tokenize(sentence)));
+      const rawUnits = resolveLexicalUnits(tokenizer.tokenize(sentence));
+      result.push(resolveSpans(rawUnits, sentence));
     }
 
     // If the block had no sentence-ending punctuation, splitSentences returns
