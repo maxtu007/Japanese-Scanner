@@ -57,18 +57,23 @@ export async function extractTextWithGoogle(file) {
   const fta = result.fullTextAnnotation;
   const page = fta.pages?.[0];
 
-  const blocks = (page?.blocks ?? []).map((block) => ({
-    text:
-      block.paragraphs
-        ?.flatMap(
-          (p) =>
-            p.words?.flatMap((w) => w.symbols?.map((s) => s.text) ?? []) ?? []
-        )
-        .join('') ?? '',
-    boundingBox: block.boundingBox ?? null,
-    confidence: block.confidence ?? null,
-    paragraphs: block.paragraphs ?? [],
-  }));
+  const blocks = (page?.blocks ?? []).map((block) => {
+    // Preserve paragraph boundaries as \n so layout reconstruction and
+    // tokenization can treat them as sentence separators within a block.
+    const paragraphTexts = (block.paragraphs ?? []).map(
+      (p) =>
+        (p.words ?? [])
+          .flatMap((w) => (w.symbols ?? []).map((s) => s.text))
+          .join('')
+    ).filter((t) => t.length > 0);
+
+    return {
+      text: paragraphTexts.join('\n'),
+      boundingBox: block.boundingBox ?? null,
+      confidence: block.confidence ?? null,
+      paragraphs: block.paragraphs ?? [],
+    };
+  });
 
   const confidenceValues = blocks
     .map((b) => b.confidence)
@@ -80,6 +85,8 @@ export async function extractTextWithGoogle(file) {
   return {
     fullText: fta.text ?? '',
     blocks,
+    pageWidth:  page?.width  ?? null,
+    pageHeight: page?.height ?? null,
     locale: result.textAnnotations?.[0]?.locale ?? '',
     confidence: avgConfidence,
   };

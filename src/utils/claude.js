@@ -97,6 +97,56 @@ export function preprocessOCRText(text) {
   return cleaned.join('\n').trim();
 }
 
+// Combined clean + translate in a single Haiku call.
+// Replaces the old two-call sequence (cleanOCRText → translateText) to save one network round trip.
+export async function cleanAndTranslate(rawText) {
+  if (!rawText || !rawText.trim()) return { japanese: rawText, translation: '' };
+
+  if (!apiKey) {
+    throw new Error(
+      'API key not configured. Create a .env file with VITE_ANTHROPIC_API_KEY=your-key.'
+    );
+  }
+
+  const response = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 3072,
+    messages: [
+      {
+        role: 'user',
+        content: `You are processing pre-structured Japanese text. Do two things in one pass:
+
+1. Lightly normalize the Japanese text:
+   - Remove remaining OCR artifacts (stray symbols, broken spacing)
+   - Preserve all paragraph breaks and sentence boundaries as-is
+   - Do not merge lines, reorder content, or paraphrase
+
+2. Translate the normalized text to natural English.
+
+Respond ONLY with valid JSON — no markdown, no explanation:
+{"japanese":"normalized japanese text here","translation":"english translation here"}
+
+Text:
+${rawText}`,
+      },
+    ],
+  });
+
+  const raw = (response.content[0]?.text ?? '').trim();
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) {
+    // Fallback: if model didn't return JSON, use raw as japanese, no translation
+    return { japanese: rawText, translation: '' };
+  }
+
+  const result = JSON.parse(match[0]);
+  return {
+    japanese: (result.japanese || rawText).trim(),
+    translation: (result.translation || '').trim(),
+  };
+}
+
+// Kept for any direct callers, but no longer used in the main scan pipeline.
 export async function cleanOCRText(rawText) {
   if (!rawText || !rawText.trim()) return rawText;
 

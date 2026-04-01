@@ -3,17 +3,19 @@ import Upload from './components/Upload';
 import TextDisplay from './components/TextDisplay';
 import WordModal from './components/WordModal';
 import SavedWords from './components/SavedWords';
-import { extractTextFromImage, translateText, cleanOCRText, preprocessOCRText } from './utils/claude';
+import { extractTextFromImage, cleanAndTranslate, preprocessOCRText } from './utils/claude';
+import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
-import { scoreOCRQuality, getImageDimensions } from './utils/ocrQuality';
+import { scoreOCRQuality } from './utils/ocrQuality';
 import { tokenizeLines, hasJapanese } from './utils/japanese';
 import { loadSavedWords, saveWord, removeWord } from './utils/storage';
+
 
 export default function App() {
   const [phase, setPhase] = useState('upload'); // 'upload' | 'processing' | 'results'
   const [status, setStatus] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
-  const [tokenLines, setTokenLines] = useState([]);
+  const [tokenBlocks, setTokenBlocks] = useState([]); // [{ sentences: ChunkUnit[][] }]
   const [cleanText, setCleanText] = useState('');
   const [translation, setTranslation] = useState('');
   const [selectedToken, setSelectedToken] = useState(null);
@@ -30,8 +32,6 @@ export default function App() {
     setPhase('processing');
     setError(null);
 
-    let rawText = '';
-    let normalizedText = '';
     let translation = '';
 
     try {
@@ -52,48 +52,87 @@ export default function App() {
       }
 
       if (!usedFallback && visionResult) {
-        let dimensions = null;
-        try {
-          dimensions = await getImageDimensions(file);
-        } catch {
-          // dimensions stays null; ocrQuality handles this gracefully
-        }
-
-        const quality = scoreOCRQuality(visionResult.fullText, dimensions);
-        ts(`quality-score=${quality.score} shouldFallback=${quality.shouldFallback}`);
+        // Score against combined block text (more accurate than Vision's fullText
+        // which has its own whitespace quirks and ordering artifacts).
+        const combinedBlockText = (visionResult.blocks ?? []).map((b) => b.text).join('');
+        const quality = scoreOCRQuality(combinedBlockText || visionResult.fullText, null);
+        ts(
+          `quality score=${quality.score} shouldFallback=${quality.shouldFallback}` +
+          (quality.debug?.earlyAccept ? ' (earlyAccept)' : '')
+        );
 
         if (quality.shouldFallback) {
           usedFallback = true;
         }
       }
 
+      let blocks = [];
+
       if (usedFallback) {
+        // Opus path: one call, no block structure — render as a single block
         setStatus('Scanning…');
         const result = await extractTextFromImage(file);
-        rawText = result.japanese;
-        normalizedText = result.japanese; // Claude Vision output is already clean
+        const normalizedText = result.japanese;
         translation = result.translation;
         ts('claude-opus-vision done');
+
+        if (!normalizedText || !hasJapanese(normalizedText)) {
+          throw new Error('No Japanese text detected in this image.');
+        }
+
+        setStatus('Processing text…');
+        setCleanText(normalizedText);
+        const sentences = await tokenizeLines(normalizedText);
+        ts('tokenizeLines done');
+        blocks = [{ sentences }];
+
       } else {
-        rawText = visionResult.fullText;
-        setStatus('Cleaning up text…');
-        normalizedText = await cleanOCRText(preprocessOCRText(rawText));
-        ts('cleanOCRText done');
+        // Fast path: run layout reconstruction before any text processing.
+        // This merges over-split bubbles, detects columns, and produces reading order
+        // before text is touched — preserving spatial structure through the pipeline.
+        const rawBlocks = visionResult.blocks?.length > 0
+          ? visionResult.blocks
+          : [{ text: visionResult.fullText, boundingBox: null }];
+
+        const regions = reconstructLayout(
+          rawBlocks,
+          visionResult.pageWidth,
+          visionResult.pageHeight,
+        );
+
+        // Fall back to fullText as a single region if reconstruction yields nothing
+        const effectiveRegions = regions.length > 0
+          ? regions
+          : [{ text: visionResult.fullText }];
+
+        // Per-region cleanup (deterministic, no AI) — drops noise lines, preserves \n
+        const processedRegions = effectiveRegions
+          .map((r) => ({ ...r, processedText: preprocessOCRText(r.text) }))
+          .filter((r) => r.processedText.trim().length > 0 && hasJapanese(r.processedText));
+
+        if (processedRegions.length === 0) {
+          throw new Error('No Japanese text detected in this image.');
+        }
+
+        // Translation: one Haiku call over combined text (translation benefits from
+        // full context; Japanese cleanup now happens structurally, not via AI).
         setStatus('Translating…');
-        translation = await translateText(normalizedText);
-        ts('translateText done');
+        const combinedText = processedRegions.map((r) => r.processedText).join('\n\n');
+        const { translation: tx } = await cleanAndTranslate(combinedText);
+        translation = tx;
+        ts('cleanAndTranslate done');
+
+        // Tokenize each region separately — regions stay as distinct display units
+        setStatus('Processing text…');
+        setCleanText(combinedText);
+        for (const region of processedRegions) {
+          const sentences = await tokenizeLines(region.processedText);
+          if (sentences.length > 0) blocks.push({ sentences });
+        }
+        ts(`tokenizeLines done (${blocks.length} regions)`);
       }
 
-      if (!normalizedText || !hasJapanese(normalizedText)) {
-        throw new Error('No Japanese text detected in this image.');
-      }
-
-      setStatus('Processing text…');
-      setCleanText(normalizedText);
-      const lines = await tokenizeLines(normalizedText);
-      ts('tokenizeLines done');
-
-      setTokenLines(lines);
+      setTokenBlocks(blocks);
       setTranslation(translation);
       setPhase('results');
     } catch (err) {
@@ -113,7 +152,7 @@ export default function App() {
   function handleScanAgain() {
     if (imageSrc) URL.revokeObjectURL(imageSrc);
     setImageSrc(null);
-    setTokenLines([]);
+    setTokenBlocks([]);
     setCleanText('');
     setTranslation('');
     setSelectedToken(null);
@@ -196,7 +235,7 @@ export default function App() {
 
         {phase === 'results' && (
           <div className="results">
-            <TextDisplay tokenLines={tokenLines} onWordClick={setSelectedToken} />
+            <TextDisplay tokenBlocks={tokenBlocks} onWordClick={setSelectedToken} />
 
             <div className="translation">
               <p className="translation-label">Translation</p>

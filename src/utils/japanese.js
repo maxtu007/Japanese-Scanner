@@ -1,6 +1,5 @@
 import kuromoji from 'kuromoji';
-import { resolveLexicalUnits } from './lexer.js';
-import { matchPatterns } from './patternMatcher.js';
+import { resolveChunks } from './chunkResolver.js';
 import { resolveSpans } from './spanResolver.js';
 
 let _tokenizer = null;
@@ -49,38 +48,32 @@ export async function tokenizeLines(text) {
   const tokenizer = await getTokenizer();
   if (!text?.trim()) return [];
 
-  // Step 1 — split into paragraph blocks on blank lines.
-  // Blank lines represent genuine structural breaks; single newlines may be
-  // OCR/layout artifacts that should not fragment the resolver's input.
+  // Step 1 — split into paragraph blocks.
+  //
+  // Two separator levels are recognised, in priority order:
+  //   · \n\n (blank line) — always a structural break (region/paragraph boundary)
+  //   · \n   (single newline) — a Vision paragraph boundary within a block,
+  //          preserved by googleVision.js as a sentence separator.
+  //          Previously these were joined away as OCR artifacts, but the pipeline
+  //          now emits them intentionally so they must be respected here.
+  //
+  // We split on any newline sequence, then treat each non-empty line as its own
+  // paragraph for sentence-splitting purposes.  Empty lines become block gaps.
   const paragraphs = text
-    .split(/\n\s*\n/)
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
-
-  // If there are no blank lines the entire text is one block.
-  const blocks = paragraphs.length > 0 ? paragraphs : [text.trim()];
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 
   const result = [];
-  for (const block of blocks) {
-    // Step 2 — join sublines within the block so the resolver always receives
-    // a complete, unfragmented chunk of text, not a raw OCR line slice.
-    const joined = block
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
-      .join('');
-
-    // Step 3 — split into sentence-level units for display.
-    // Each sentence becomes one <p> in the UI.
-    for (const sentence of splitSentences(joined)) {
-      const tokens      = tokenizer.tokenize(sentence);
-      const patternHits = matchPatterns(tokens);
-      const rawUnits    = resolveLexicalUnits(tokens, patternHits);
-      result.push(resolveSpans(rawUnits, sentence));
+  for (const para of paragraphs) {
+    // Step 2 — sentence-split within the paragraph.
+    // splitSentences keeps sentence-terminal punctuation with its sentence and
+    // returns the whole paragraph as one entry when no such marker is found.
+    for (const sentence of splitSentences(para)) {
+      const tokens    = tokenizer.tokenize(sentence);
+      const rawChunks = resolveChunks(tokens);
+      result.push(resolveSpans(rawChunks, sentence));
     }
-
-    // If the block had no sentence-ending punctuation, splitSentences returns
-    // the whole joined block as one entry — that's the correct fallback.
   }
 
   return result;
