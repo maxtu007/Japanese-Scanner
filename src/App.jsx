@@ -35,15 +35,20 @@ export default function App() {
     let translation = '';
 
     try {
+      const t0 = performance.now();
+      const ts = (label) => console.log(`[scan] ${label} +${(performance.now() - t0).toFixed(0)}ms`);
+
       setStatus('Running OCR…');
       let visionResult = null;
       let usedFallback = false;
 
       try {
         visionResult = await extractTextWithGoogle(file);
+        ts('google-vision done');
       } catch (visionErr) {
         console.warn('Google Vision failed, falling back to Claude Vision:', visionErr.message);
         usedFallback = true;
+        ts('google-vision failed → fallback');
       }
 
       if (!usedFallback && visionResult) {
@@ -55,6 +60,7 @@ export default function App() {
         }
 
         const quality = scoreOCRQuality(visionResult.fullText, dimensions);
+        ts(`quality-score=${quality.score} shouldFallback=${quality.shouldFallback}`);
 
         if (quality.shouldFallback) {
           usedFallback = true;
@@ -67,12 +73,15 @@ export default function App() {
         rawText = result.japanese;
         normalizedText = result.japanese; // Claude Vision output is already clean
         translation = result.translation;
+        ts('claude-opus-vision done');
       } else {
         rawText = visionResult.fullText;
         setStatus('Cleaning up text…');
         normalizedText = await cleanOCRText(preprocessOCRText(rawText));
+        ts('cleanOCRText done');
         setStatus('Translating…');
         translation = await translateText(normalizedText);
+        ts('translateText done');
       }
 
       if (!normalizedText || !hasJapanese(normalizedText)) {
@@ -82,6 +91,7 @@ export default function App() {
       setStatus('Processing text…');
       setCleanText(normalizedText);
       const lines = await tokenizeLines(normalizedText);
+      ts('tokenizeLines done');
 
       setTokenLines(lines);
       setTranslation(translation);
