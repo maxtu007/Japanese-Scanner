@@ -5,12 +5,11 @@ import { toHiragana } from '../utils/japanese';
 export default function WordModal({ token, onClose, onSave, isSaved }) {
   const [lookup,  setLookup]  = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
   const [saved,   setSaved]   = useState(isSaved);
 
   const surface      = token.surface_form;
   const baseForm     = token.basic_form && token.basic_form !== '*' ? token.basic_form : surface;
-  // lookupTarget is the explicit contract from chunkResolver; fall back to baseForm for
-  // legacy or fallback-merged spans that may not carry the field.
   const lookupTarget = token.lookupTarget ?? baseForm;
   const grammarLabel = token.grammarLabel ?? null;
   const localReading = toHiragana(token.reading);
@@ -21,34 +20,22 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
     let cancelled = false;
     setLoading(true);
     setLookup(null);
+    setError(null);
 
-    // Primary lookup: use the explicit lookupTarget (base verb for te-constructions,
-    // full expression for postpositionals, lemma for everything else).
-    lookupWord(lookupTarget)
+    lookupWord(lookupTarget, surface)
       .then(result => {
-        // Grammar label fallback: if primary lookup fails and there is a grammarLabel
-        // that differs from the primary target, try looking up the label itself.
-        if (!result && grammarLabel && grammarLabel !== lookupTarget) {
-          return lookupWord(grammarLabel);
-        }
-        return result;
+        if (!cancelled) { setLookup(result); setLoading(false); }
       })
-      .then(result => {
-        // Surface fallback: last resort so the modal always has something to show.
-        if (!result && lookupTarget !== surface) {
-          return lookupWord(surface);
-        }
-        return result;
-      })
-      .then(result => {
+      .catch(err => {
         if (!cancelled) {
-          setLookup(result);
+          console.error('Dictionary lookup failed:', err.message);
+          setError('Lookup failed');
           setLoading(false);
         }
       });
 
     return () => { cancelled = true; };
-  }, [lookupTarget, grammarLabel, surface]);
+  }, [lookupTarget, surface]);
 
   function handleOverlayClick(e) {
     if (e.target === e.currentTarget) onClose();
@@ -59,20 +46,20 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
     onSave({
       id:             (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
       word:           lookupTarget,
-      dictionaryForm: lookup?.word ?? lookupTarget,
+      dictionaryForm: lookup?.dictionaryForm ?? lookupTarget,
       reading,
-      meanings:       lookup?.meanings ?? [],
-      pos:            lookup?.pos ?? [],
+      meanings:       lookup?.found ? lookup.meanings : [],
+      pos:            lookup?.found ? lookup.pos : [],
       savedAt:        new Date().toISOString(),
     });
     setSaved(true);
   }
 
   const displayReading = lookup?.reading || localReading;
-  const meanings       = lookup?.meanings ?? [];
-  const posList        = lookup?.pos ?? [];
-  // Prefer the Jisho-resolved canonical form; fall back to kuromoji basic_form
-  const displayDict    = (lookup?.word && lookup.word !== surface) ? lookup.word : baseForm;
+  const posList        = lookup?.found ? (lookup.pos ?? []) : [];
+  const displayDict    = (lookup?.found && lookup.dictionaryForm && lookup.dictionaryForm !== surface)
+    ? lookup.dictionaryForm
+    : baseForm;
 
   return (
     <div className="overlay" onClick={handleOverlayClick} role="dialog" aria-modal="true">
@@ -97,9 +84,11 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
         <div className="modal-defs">
           {loading ? (
             <p className="def-loading">Looking up…</p>
-          ) : meanings.length > 0 ? (
+          ) : error ? (
+            <p className="def-error">{error}</p>
+          ) : lookup?.found ? (
             <ul>
-              {meanings.map((m, i) => (
+              {lookup.meanings.map((m, i) => (
                 <li key={i}>{m}</li>
               ))}
             </ul>
