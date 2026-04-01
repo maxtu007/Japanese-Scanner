@@ -24,7 +24,11 @@ export default function SavedWords({ words, onClose, onRemove }) {
                   {w.reading && (
                     <span className="saved-reading">{w.reading}</span>
                   )}
-                  <span className="saved-meaning">{w.meaning}</span>
+                  <span className="saved-meaning">
+                    {w.meanings?.length
+                      ? w.meanings.slice(0, 2).join('; ')
+                      : (w.meaning ?? '—')}
+                  </span>
                 </div>
                 <button
                   className="btn-rm"

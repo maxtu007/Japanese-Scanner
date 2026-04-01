@@ -3,13 +3,16 @@ import { lookupWord } from '../utils/jisho';
 import { toHiragana } from '../utils/japanese';
 
 export default function WordModal({ token, onClose, onSave, isSaved }) {
-  const [lookup, setLookup] = useState(null);
+  const [lookup,  setLookup]  = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saved, setSaved] = useState(isSaved);
+  const [saved,   setSaved]   = useState(isSaved);
 
-  const surface = token.surface_form;
-  const baseForm =
-    token.basic_form && token.basic_form !== '*' ? token.basic_form : surface;
+  const surface      = token.surface_form;
+  const baseForm     = token.basic_form && token.basic_form !== '*' ? token.basic_form : surface;
+  // lookupTarget is the explicit contract from chunkResolver; fall back to baseForm for
+  // legacy or fallback-merged spans that may not carry the field.
+  const lookupTarget = token.lookupTarget ?? baseForm;
+  const grammarLabel = token.grammarLabel ?? null;
   const localReading = toHiragana(token.reading);
 
   useEffect(() => setSaved(isSaved), [isSaved]);
@@ -19,15 +22,33 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
     setLoading(true);
     setLookup(null);
 
-    lookupWord(baseForm).then((result) => {
-      if (!cancelled) {
-        setLookup(result);
-        setLoading(false);
-      }
-    });
+    // Primary lookup: use the explicit lookupTarget (base verb for te-constructions,
+    // full expression for postpositionals, lemma for everything else).
+    lookupWord(lookupTarget)
+      .then(result => {
+        // Grammar label fallback: if primary lookup fails and there is a grammarLabel
+        // that differs from the primary target, try looking up the label itself.
+        if (!result && grammarLabel && grammarLabel !== lookupTarget) {
+          return lookupWord(grammarLabel);
+        }
+        return result;
+      })
+      .then(result => {
+        // Surface fallback: last resort so the modal always has something to show.
+        if (!result && lookupTarget !== surface) {
+          return lookupWord(surface);
+        }
+        return result;
+      })
+      .then(result => {
+        if (!cancelled) {
+          setLookup(result);
+          setLoading(false);
+        }
+      });
 
     return () => { cancelled = true; };
-  }, [baseForm]);
+  }, [lookupTarget, grammarLabel, surface]);
 
   function handleOverlayClick(e) {
     if (e.target === e.currentTarget) onClose();
@@ -35,16 +56,23 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
 
   function handleSave() {
     const reading = lookup?.reading || localReading;
-    const meaning =
-      lookup?.meanings?.length
-        ? lookup.meanings.join('; ')
-        : 'No definition found';
-    onSave({ word: baseForm, reading, meaning });
+    onSave({
+      id:             (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
+      word:           lookupTarget,
+      dictionaryForm: lookup?.word ?? lookupTarget,
+      reading,
+      meanings:       lookup?.meanings ?? [],
+      pos:            lookup?.pos ?? [],
+      savedAt:        new Date().toISOString(),
+    });
     setSaved(true);
   }
 
   const displayReading = lookup?.reading || localReading;
-  const meanings = lookup?.meanings ?? [];
+  const meanings       = lookup?.meanings ?? [];
+  const posList        = lookup?.pos ?? [];
+  // Prefer the Jisho-resolved canonical form; fall back to kuromoji basic_form
+  const displayDict    = (lookup?.word && lookup.word !== surface) ? lookup.word : baseForm;
 
   return (
     <div className="overlay" onClick={handleOverlayClick} role="dialog" aria-modal="true">
@@ -53,10 +81,14 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
 
         <div className="modal-word-row">
           <span className="modal-surface">{surface}</span>
-          {baseForm !== surface && (
-            <span className="modal-base">{baseForm}</span>
+          {displayDict !== surface && (
+            <span className="modal-base">{displayDict}</span>
           )}
         </div>
+
+        {grammarLabel && (
+          <p className="modal-grammar-label">{grammarLabel}</p>
+        )}
 
         {displayReading && (
           <p className="modal-reading">{displayReading}</p>
@@ -75,6 +107,14 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
             <p className="def-empty">No definition found</p>
           )}
         </div>
+
+        {posList.length > 0 && (
+          <div className="modal-pos-row">
+            {posList.map((p, i) => (
+              <span key={i} className="modal-pos-chip">{p}</span>
+            ))}
+          </div>
+        )}
 
         <button
           className="btn-save"
