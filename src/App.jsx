@@ -112,17 +112,67 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>Japan Scanner</h1>
-        {phase === 'results' && (
-          <button className="btn-ghost" onClick={() => setShowSaved(true)}>
-            Saved ({savedWords.length})
-          </button>
-        )}
-      </header>
+      {phase !== 'upload' && (
+        <header className="header">
+          <div className="wordmark-sm">Un<em>blur</em></div>
+          {phase === 'results' && (
+            <button className="btn-ghost" onClick={() => setShowSaved(true)}>
+              Saved ({savedWords.length})
+            </button>
+          )}
+        </header>
+      )}
 
       <main>
-        {phase === 'upload' && <Upload onFile={handleFile} />}
+        {phase === 'upload' && (
+          <div className="home">
+            <div className="home-header">
+              <div className="wordmark">Un<em>blur</em></div>
+              <div className="tagline">Point. Tap. Understand.</div>
+            </div>
+            <div className="home-illus">
+              <img src="/books.png" alt="" />
+            </div>
+            <Upload onFile={handleFile} />
+            <nav className="bottom-nav">
+              <button className="nav-item active">
+                <div className="nav-icon-bg active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <rect x="7" y="7" width="10" height="10" rx="1"/>
+                  </svg>
+                </div>
+                <span>Scan</span>
+              </button>
+              <button className="nav-item" disabled>
+                <div className="nav-icon-bg">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+                  </svg>
+                </div>
+                <span>History</span>
+              </button>
+              <button className="nav-item" disabled>
+                <div className="nav-icon-bg">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="9" height="13" rx="1.5"/><rect x="7" y="8" width="9" height="13" rx="1.5"/>
+                  </svg>
+                </div>
+                <span>Flashcards</span>
+              </button>
+              <button className="nav-item" disabled>
+                <div className="nav-icon-bg">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </div>
+                <span>Settings</span>
+              </button>
+            </nav>
+          </div>
+        )}
 
         {phase === 'processing' && (
           <div className="processing">
@@ -165,11 +215,12 @@ export default function App() {
           onClose={() => setSelectedToken(null)}
           onSave={handleSave}
           isSaved={savedWords.some((w) => {
-            const base =
-              selectedToken.basic_form && selectedToken.basic_form !== '*'
-                ? selectedToken.basic_form
-                : selectedToken.surface_form;
-            return w.word === base;
+            const target =
+              selectedToken.lookupTarget
+                ?? (selectedToken.basic_form && selectedToken.basic_form !== '*'
+                    ? selectedToken.basic_form
+                    : selectedToken.surface_form);
+            return w.word === target;
           })}
         />
       )}
