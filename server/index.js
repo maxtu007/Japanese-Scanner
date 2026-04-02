@@ -28,9 +28,9 @@ async function jishoLookup(word) {
   const meanings = [];
   const posSet   = new Set();
 
-  for (const sense of (entry.senses ?? []).slice(0, 2)) {
-    const def = (sense.english_definitions ?? [])[0];
-    if (def) meanings.push(def);
+  for (const sense of (entry.senses ?? []).slice(0, 5)) {
+    const defs = (sense.english_definitions ?? []).slice(0, 4);
+    if (defs.length) meanings.push(defs.join('; '));
     const p = sense.parts_of_speech?.[0];
     if (p) posSet.add(p);
   }
@@ -40,8 +40,8 @@ async function jishoLookup(word) {
     word:           jp.word    || word,
     dictionaryForm: jp.word    || word,
     reading:        jp.reading || '',
-    meanings:       meanings.slice(0, 2),
-    pos:            [...posSet].slice(0, 2),
+    meanings:       meanings.slice(0, 5),
+    pos:            [...posSet].slice(0, 3),
   };
 }
 

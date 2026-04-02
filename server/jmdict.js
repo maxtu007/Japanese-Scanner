@@ -42,9 +42,12 @@ function normalizeWord(w) {
   const meanings = [];
   const posSet   = new Set();
 
-  for (const sense of (w.sense ?? []).slice(0, 2)) {
-    const def = sense.gloss?.find((g) => g.lang === 'eng')?.text;
-    if (def) meanings.push(def);
+  for (const sense of (w.sense ?? []).slice(0, 5)) {
+    const defs = (sense.gloss ?? [])
+      .filter((g) => g.lang === 'eng')
+      .map((g) => g.text)
+      .slice(0, 4);
+    if (defs.length) meanings.push(defs.join('; '));
     const p = sense.partOfSpeech?.[0];
     if (p) posSet.add(POS_LABELS[p] ?? p);
   }
@@ -54,8 +57,8 @@ function normalizeWord(w) {
     word:           kanji,
     dictionaryForm: kanji,
     reading,
-    meanings:       meanings.slice(0, 2),
-    pos:            [...posSet].slice(0, 2),
+    meanings:       meanings.slice(0, 5),
+    pos:            [...posSet].slice(0, 3),
   };
 }
 

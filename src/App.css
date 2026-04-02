@@ -534,9 +534,11 @@ rt {
 }
 
 .modal-reading {
-  font-size: 15px;
-  color: var(--muted);
-  margin-bottom: 18px;
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 14px;
+  letter-spacing: 0.01em;
 }
 
 .modal-defs {
@@ -544,15 +546,45 @@ rt {
   margin-bottom: 20px;
 }
 
-.modal-defs ul {
+.modal-def-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0;
+  counter-reset: def-counter;
+  padding: 0;
+  margin: 0;
 }
 
-.modal-defs li {
+.modal-def-list li {
   font-size: 15px;
+  line-height: 1.55;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  counter-increment: def-counter;
+  display: flex;
+  gap: 10px;
+  color: var(--text);
+}
+
+.modal-def-list li::before {
+  content: counter(def-counter);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 4px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.modal-def-list li:last-child {
+  border-bottom: none;
 }
 
 .def-loading,
@@ -600,7 +632,6 @@ rt {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: -12px;
   margin-bottom: 14px;
 }
 

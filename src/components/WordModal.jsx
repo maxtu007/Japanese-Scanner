@@ -6,7 +6,7 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
   const [lookup,  setLookup]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
-  const [saved,   setSaved]   = useState(isSaved);
+  const [added,   setAdded]   = useState(isSaved);
 
   const surface      = token.surface_form;
   const baseForm     = token.basic_form && token.basic_form !== '*' ? token.basic_form : surface;
@@ -14,7 +14,7 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
   const grammarLabel = token.grammarLabel ?? null;
   const localReading = toHiragana(token.reading);
 
-  useEffect(() => setSaved(isSaved), [isSaved]);
+  useEffect(() => setAdded(isSaved), [isSaved]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +41,7 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
     if (e.target === e.currentTarget) onClose();
   }
 
-  function handleSave() {
+  function handleAdd() {
     const reading = lookup?.reading || localReading;
     onSave({
       id:             (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
@@ -52,7 +52,7 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
       pos:            lookup?.found ? lookup.pos : [],
       savedAt:        new Date().toISOString(),
     });
-    setSaved(true);
+    setAdded(true);
   }
 
   const displayReading = lookup?.reading || localReading;
@@ -66,6 +66,7 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
       <div className="modal">
         <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
 
+        {/* Word + base form */}
         <div className="modal-word-row">
           <span className="modal-surface">{surface}</span>
           {displayDict !== surface && (
@@ -73,30 +74,17 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
           )}
         </div>
 
-        {grammarLabel && (
-          <p className="modal-grammar-label">{grammarLabel}</p>
-        )}
-
+        {/* Reading */}
         {displayReading && (
           <p className="modal-reading">{displayReading}</p>
         )}
 
-        <div className="modal-defs">
-          {loading ? (
-            <p className="def-loading">Looking up…</p>
-          ) : error ? (
-            <p className="def-error">{error}</p>
-          ) : lookup?.found ? (
-            <ul>
-              {lookup.meanings.map((m, i) => (
-                <li key={i}>{m}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="def-empty">No definition found</p>
-          )}
-        </div>
+        {/* Grammar label (for grammar patterns) */}
+        {grammarLabel && (
+          <p className="modal-grammar-label">{grammarLabel}</p>
+        )}
 
+        {/* POS chips */}
         {posList.length > 0 && (
           <div className="modal-pos-row">
             {posList.map((p, i) => (
@@ -105,12 +93,29 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
           </div>
         )}
 
+        {/* Definitions */}
+        <div className="modal-defs">
+          {loading ? (
+            <p className="def-loading">Looking up…</p>
+          ) : error ? (
+            <p className="def-error">{error}</p>
+          ) : lookup?.found ? (
+            <ol className="modal-def-list">
+              {lookup.meanings.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ol>
+          ) : (
+            <p className="def-empty">No definition found</p>
+          )}
+        </div>
+
         <button
           className="btn-save"
-          onClick={handleSave}
-          disabled={saved}
+          onClick={handleAdd}
+          disabled={added}
         >
-          {saved ? '✓ Saved' : 'Save Word'}
+          {added ? '✓ Added' : 'Add Word'}
         </button>
       </div>
     </div>
