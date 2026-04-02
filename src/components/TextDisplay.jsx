@@ -35,7 +35,6 @@ export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations
       {tokenBlocks.map((block, bi) => (
         <div key={bi} className="text-block">
           {block.sentences.map((sent, li) => {
-            const sentenceText = sent.tokens.map(t => t.surface_form).join('');
             return (
               <div key={li} className="sentence-unit">
                 <p className="text-line">
@@ -43,7 +42,7 @@ export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations
                     <WordToken
                       key={ti}
                       token={token}
-                      sentence={sentenceText}
+                      sentence={sent}
                       showFurigana={showFurigana}
                       onClick={onWordClick}
                     />

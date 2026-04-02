@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { lookupWord } from '../utils/jisho';
 import { toHiragana } from '../utils/japanese';
 import { explainWord } from '../utils/explain';
+import { speakOne } from '../utils/tts';
 
-export default function WordModal({ token, sentence, onClose, onSave, isSaved }) {
+export default function WordModal({ token, sentence, onClose, onRequestAdd, isAdded }) {
   const [lookup,      setLookup]      = useState(null);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState(null);
-  const [added,       setAdded]       = useState(isSaved);
   const [explanation, setExplanation] = useState(null);
   const [explaining,  setExplaining]  = useState(false);
 
@@ -17,26 +17,16 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
   const grammarLabel = token.grammarLabel ?? null;
   const localReading = toHiragana(token.reading);
 
-  useEffect(() => setAdded(isSaved), [isSaved]);
-
-  // Dictionary lookup
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setLookup(null);
     setError(null);
-    setExplanation(null);
 
     lookupWord(lookupTarget, surface)
-      .then(result => {
-        if (!cancelled) { setLookup(result); setLoading(false); }
-      })
+      .then(result => { if (!cancelled) { setLookup(result); setLoading(false); } })
       .catch(err => {
-        if (!cancelled) {
-          console.error('Dictionary lookup failed:', err.message);
-          setError('Lookup failed');
-          setLoading(false);
-        }
+        if (!cancelled) { console.error('Dictionary lookup failed:', err.message); setError('Lookup failed'); setLoading(false); }
       });
 
     return () => { cancelled = true; };
@@ -49,13 +39,10 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
     setExplaining(true);
 
     const reading = lookup?.reading || localReading;
-    explainWord(lookupTarget, reading, sentence)
-      .then(text => {
-        if (!cancelled) { setExplanation(text); setExplaining(false); }
-      })
-      .catch(() => {
-        if (!cancelled) setExplaining(false);
-      });
+    const sentenceText = sentence?.tokens?.map(t => t.surface_form).join('') ?? '';
+    explainWord(lookupTarget, reading, sentenceText)
+      .then(text => { if (!cancelled) { setExplanation(text); setExplaining(false); } })
+      .catch(() => { if (!cancelled) setExplaining(false); });
 
     return () => { cancelled = true; };
   }, [loading, lookupTarget, sentence]);
@@ -66,16 +53,18 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
 
   function handleAdd() {
     const reading = lookup?.reading || localReading;
-    onSave({
-      id:             (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
-      word:           lookupTarget,
-      dictionaryForm: lookup?.dictionaryForm ?? lookupTarget,
+    const exampleSentence = sentence?.tokens?.map(t => t.surface_form).join('') ?? '';
+    const exampleTranslation = sentence?.translation ?? '';
+
+    onRequestAdd({
+      word:               lookupTarget,
+      dictionaryForm:     lookup?.dictionaryForm ?? lookupTarget,
       reading,
-      meanings:       lookup?.found ? lookup.meanings : [],
-      pos:            lookup?.found ? lookup.pos : [],
-      savedAt:        new Date().toISOString(),
+      meanings:           lookup?.found ? lookup.meanings : [],
+      pos:                lookup?.found ? (lookup.pos ?? []) : [],
+      exampleSentence,
+      exampleTranslation,
     });
-    setAdded(true);
   }
 
   const displayReading = lookup?.reading || localReading;
@@ -89,25 +78,30 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
       <div className="modal">
         <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
 
-        {/* Word + base form */}
         <div className="modal-word-row">
-          <span className="modal-surface">{surface}</span>
-          {displayDict !== surface && (
-            <span className="modal-base">{displayDict}</span>
-          )}
+          <div className="modal-word-left">
+            <span className="modal-surface">{surface}</span>
+            {displayDict !== surface && (
+              <span className="modal-base">{displayDict}</span>
+            )}
+          </div>
+          <button className="speak-btn" onClick={() => speakOne(lookupTarget)} aria-label="Listen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </button>
         </div>
 
-        {/* Reading */}
         {displayReading && (
           <p className="modal-reading">{displayReading}</p>
         )}
 
-        {/* Grammar label */}
         {grammarLabel && (
           <p className="modal-grammar-label">{grammarLabel}</p>
         )}
 
-        {/* POS chips */}
         {posList.length > 0 && (
           <div className="modal-pos-row">
             {posList.map((p, i) => (
@@ -116,7 +110,6 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
           </div>
         )}
 
-        {/* Definitions */}
         <div className="modal-defs">
           {loading ? (
             <p className="def-loading">Looking up…</p>
@@ -133,7 +126,6 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
           )}
         </div>
 
-        {/* Contextual explanation */}
         {(explaining || explanation) && (
           <div className="modal-explanation">
             {explaining ? (
@@ -147,9 +139,9 @@ export default function WordModal({ token, sentence, onClose, onSave, isSaved })
         <button
           className="btn-save"
           onClick={handleAdd}
-          disabled={added}
+          disabled={isAdded}
         >
-          {added ? '✓ Added' : 'Add Word'}
+          {isAdded ? '✓ Added to Flashcards' : 'Add to Flashcards'}
         </button>
       </div>
     </div>

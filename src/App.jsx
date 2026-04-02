@@ -1,30 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Upload from './components/Upload';
 import TextDisplay from './components/TextDisplay';
 import WordModal from './components/WordModal';
-import SavedWords from './components/SavedWords';
+import AddToDeckModal from './components/AddToDeckModal';
+import FlashcardsTab from './components/FlashcardsTab';
+import AudioBar from './components/AudioBar';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
 import { tokenizeLines, hasJapanese } from './utils/japanese';
-import { loadSavedWords, saveWord, removeWord } from './utils/storage';
+import { loadDecks } from './utils/deckStorage';
 
 
 export default function App() {
   const [phase, setPhase] = useState('upload'); // 'upload' | 'processing' | 'results'
+  const [activeTab, setActiveTab] = useState('scan'); // 'scan' | 'flashcards'
   const [status, setStatus] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
-  const [tokenBlocks, setTokenBlocks] = useState([]); // [{ sentences: { tokens, translation }[] }]
-  const [selectedToken, setSelectedToken] = useState(null);   // { token, sentence }
-
+  const [tokenBlocks, setTokenBlocks] = useState([]);
+  const [selectedToken, setSelectedToken] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
   const [showFurigana, setShowFurigana] = useState(true);
-  const [showSaved, setShowSaved] = useState(false);
-  const [savedWords, setSavedWords] = useState([]);
   const [error, setError] = useState(null);
-  useEffect(() => {
-    setSavedWords(loadSavedWords());
-  }, []);
+
+  // Flashcard state
+  const [decks, setDecks] = useState(() => loadDecks());
+  const [pendingFlashcard, setPendingFlashcard] = useState(null); // card data waiting for deck selection
+
+  // Stable sentence strings for AudioBar — only recomputes when tokenBlocks changes
+  const sentenceTexts = useMemo(
+    () => tokenBlocks.flatMap(b => b.sentences.map(s => s.tokens.map(t => t.surface_form).join(''))),
+    [tokenBlocks]
+  );
 
   async function handleFile(file) {
     const src = URL.createObjectURL(file);
@@ -46,22 +53,13 @@ export default function App() {
         throw new Error('Could not read this image. Please try a clearer photo.');
       }
 
-      // Layout reconstruction: merges over-split blocks, detects columns, produces reading order
       const rawBlocks = visionResult.blocks?.length > 0
         ? visionResult.blocks
         : [{ text: visionResult.fullText, boundingBox: null }];
 
-      const regions = reconstructLayout(
-        rawBlocks,
-        visionResult.pageWidth,
-        visionResult.pageHeight,
-      );
+      const regions = reconstructLayout(rawBlocks, visionResult.pageWidth, visionResult.pageHeight);
+      const effectiveRegions = regions.length > 0 ? regions : [{ text: visionResult.fullText }];
 
-      const effectiveRegions = regions.length > 0
-        ? regions
-        : [{ text: visionResult.fullText }];
-
-      // Light noise cleanup per region, then flatten to one ordered text stream
       const cleanedRegions = effectiveRegions
         .map((r) => preprocessOCRText(r.text))
         .filter((t) => t.trim().length > 0 && hasJapanese(t));
@@ -72,12 +70,10 @@ export default function App() {
 
       const rawCombined = cleanedRegions.join('\n\n');
 
-      // Haiku reconstructs clean readable Japanese, segments by sentence, translates each
       setStatus('Translating…');
       const { sentences: sentenceTexts, translations } = await cleanAndTranslate(rawCombined);
       ts('cleanAndTranslate done');
 
-      // Tokenize each Haiku sentence and pair with its translation
       setStatus('Processing text…');
       const pairedSentences = [];
       for (let i = 0; i < sentenceTexts.length; i++) {
@@ -97,14 +93,6 @@ export default function App() {
     }
   }
 
-  function handleSave(entry) {
-    setSavedWords(saveWord(entry));
-  }
-
-  function handleRemove(word) {
-    setSavedWords(removeWord(word));
-  }
-
   function handleScanAgain() {
     if (imageSrc) URL.revokeObjectURL(imageSrc);
     setImageSrc(null);
@@ -114,33 +102,73 @@ export default function App() {
     setPhase('upload');
   }
 
+  // Called from WordModal when user taps "Add to Flashcards"
+  function handleRequestAdd(cardData) {
+    setSelectedToken(null); // close WordModal
+    setPendingFlashcard(cardData);
+  }
+
+  // Called from AddToDeckModal when a deck is chosen
+  function handleCardAdded(updatedDecks) {
+    setDecks(updatedDecks);
+    setPendingFlashcard(null);
+  }
+
+  const isAdded = selectedToken
+    ? (() => {
+        const t = selectedToken.token;
+        const target = t.lookupTarget ?? (t.basic_form && t.basic_form !== '*' ? t.basic_form : t.surface_form);
+        return decks.some(d => d.cards.some(c => c.word === target));
+      })()
+    : false;
+
   return (
     <div className="app">
       {phase !== 'upload' && (
         <header className="header">
-          <div className="wordmark-sm">Un<em>blur</em></div>
-          {phase === 'results' && (
-            <button className="btn-ghost" onClick={() => setShowSaved(true)}>
-              Saved ({savedWords.length})
+          {phase === 'results' ? (
+            <button className="header-back-btn" onClick={handleScanAgain} aria-label="Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
             </button>
+          ) : (
+            <div />
           )}
+          <div className="wordmark-sm">Un<em>blur</em></div>
+          <div style={{ width: 36 }} />
         </header>
       )}
 
       <main>
         {phase === 'upload' && (
           <div className="home">
-            <div className="home-header">
-              <div className="wordmark">Un<em>blur</em></div>
-              <div className="tagline">Point. Tap. Understand.</div>
+            <div className="home-content">
+              {activeTab === 'scan' ? (
+                <>
+                  <div className="home-header">
+                    <div className="wordmark">Un<em>blur</em></div>
+                    <div className="tagline">Point. Tap. Understand.</div>
+                  </div>
+                  <div className="home-illus">
+                    <img src="/books.png" alt="" />
+                  </div>
+                  <Upload onFile={handleFile} />
+                </>
+              ) : (
+                <FlashcardsTab
+                  decks={decks}
+                  onDecksChange={setDecks}
+                />
+              )}
             </div>
-            <div className="home-illus">
-              <img src="/books.png" alt="" />
-            </div>
-            <Upload onFile={handleFile} />
+
             <nav className="bottom-nav">
-              <button className="nav-item active">
-                <div className="nav-icon-bg active">
+              <button
+                className={`nav-item${activeTab === 'scan' ? ' active' : ''}`}
+                onClick={() => setActiveTab('scan')}
+              >
+                <div className={`nav-icon-bg${activeTab === 'scan' ? ' active' : ''}`}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
                     <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
@@ -157,8 +185,11 @@ export default function App() {
                 </div>
                 <span>History</span>
               </button>
-              <button className="nav-item" disabled>
-                <div className="nav-icon-bg">
+              <button
+                className={`nav-item${activeTab === 'flashcards' ? ' active' : ''}`}
+                onClick={() => setActiveTab('flashcards')}
+              >
+                <div className={`nav-icon-bg${activeTab === 'flashcards' ? ' active' : ''}`}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="3" width="9" height="13" rx="1.5"/><rect x="7" y="8" width="9" height="13" rx="1.5"/>
                   </svg>
@@ -180,9 +211,7 @@ export default function App() {
 
         {phase === 'processing' && (
           <div className="processing">
-            {imageSrc && (
-              <img src={imageSrc} alt="" className="thumb" />
-            )}
+            {imageSrc && <img src={imageSrc} alt="" className="thumb" />}
             <div className="spinner" />
             <p className="processing-msg">{status}</p>
           </div>
@@ -196,9 +225,6 @@ export default function App() {
               showTranslations={showTranslations}
               showFurigana={showFurigana}
             />
-            <button className="btn-ghost" onClick={handleScanAgain}>
-              ← Scan another image
-            </button>
           </div>
         )}
       </main>
@@ -215,43 +241,38 @@ export default function App() {
           token={selectedToken.token}
           sentence={selectedToken.sentence}
           onClose={() => setSelectedToken(null)}
-          onSave={handleSave}
-          isSaved={savedWords.some((w) => {
-            const t = selectedToken.token;
-            const target =
-              t.lookupTarget
-                ?? (t.basic_form && t.basic_form !== '*'
-                    ? t.basic_form
-                    : t.surface_form);
-            return w.word === target;
-          })}
+          onRequestAdd={handleRequestAdd}
+          isAdded={isAdded}
         />
       )}
 
-      {showSaved && (
-        <SavedWords
-          words={savedWords}
-          onClose={() => setShowSaved(false)}
-          onRemove={handleRemove}
+      {pendingFlashcard && (
+        <AddToDeckModal
+          card={pendingFlashcard}
+          onClose={() => setPendingFlashcard(null)}
+          onAdded={handleCardAdded}
         />
       )}
 
       {phase === 'results' && (
         <div className="results-bottom-bar">
-          <button
-            className={`bar-pill${showTranslations ? ' active' : ''}`}
-            onClick={() => setShowTranslations(v => !v)}
-          >
-            <span className="bar-pill-icon">文</span>
-            Translation
-          </button>
-          <button
-            className={`bar-pill${!showFurigana ? ' active' : ''}`}
-            onClick={() => setShowFurigana(v => !v)}
-          >
-            <span className="bar-pill-icon">ふ</span>
-            Furigana
-          </button>
+          <AudioBar sentences={sentenceTexts} />
+          <div className="bottom-pills-row">
+            <button
+              className={`bar-pill${showTranslations ? ' active' : ''}`}
+              onClick={() => setShowTranslations(v => !v)}
+            >
+              <span className="bar-pill-icon">文</span>
+              Translation
+            </button>
+            <button
+              className={`bar-pill${showFurigana ? ' active' : ''}`}
+              onClick={() => setShowFurigana(v => !v)}
+            >
+              <span className="bar-pill-icon">ふ</span>
+              Furigana
+            </button>
+          </div>
         </div>
       )}
     </div>
