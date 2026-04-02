@@ -4,17 +4,39 @@ import TextDisplay from './components/TextDisplay';
 import WordModal from './components/WordModal';
 import AddToDeckModal from './components/AddToDeckModal';
 import FlashcardsTab from './components/FlashcardsTab';
+import HistoryTab from './components/HistoryTab';
 import AudioBar from './components/AudioBar';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
 import { tokenizeLines, hasJapanese } from './utils/japanese';
 import { loadDecks } from './utils/deckStorage';
+import { addScan } from './utils/historyStorage';
+
+async function generateThumbnail(objectURL) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 110;
+      const ratio = img.width / img.height;
+      const [w, h] = ratio > 1
+        ? [MAX, Math.round(MAX / ratio)]
+        : [Math.round(MAX * ratio), MAX];
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.onerror = () => resolve('');
+    img.src = objectURL;
+  });
+}
 
 
 export default function App() {
   const [phase, setPhase] = useState('upload'); // 'upload' | 'processing' | 'results'
-  const [activeTab, setActiveTab] = useState('scan'); // 'scan' | 'flashcards'
+  const [activeTab, setActiveTab] = useState('scan'); // 'scan' | 'history' | 'flashcards'
   const [status, setStatus] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
   const [tokenBlocks, setTokenBlocks] = useState([]);
@@ -86,6 +108,26 @@ export default function App() {
 
       setTokenBlocks(pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : []);
       setShowTranslations(false);
+
+      // Save to history
+      try {
+        const thumbnail = src ? await generateThumbnail(src) : '';
+        const japanesePreview = pairedSentences
+          .slice(0, 5)
+          .map(s => s.tokens.map(t => t.surface_form).join(''))
+          .join('');
+        const titleText = japanesePreview.slice(0, 28) || '(Scan)';
+        addScan({
+          name: titleText,
+          thumbnail,
+          japanese: japanesePreview,
+          translation: pairedSentences[0]?.translation ?? '',
+          tokenBlocks: pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : [],
+        });
+      } catch (e) {
+        console.warn('[history] Failed to save scan:', e);
+      }
+
       setPhase('results');
     } catch (err) {
       setError(err.message || 'Processing failed. Please try again.');
@@ -100,6 +142,19 @@ export default function App() {
     setShowTranslations(false);
     setSelectedToken(null);
     setPhase('upload');
+  }
+
+  function handleOpenScan(scan) {
+    if (!scan.tokenBlocks?.length) {
+      setError('This scan was saved before history was supported. Please scan again to save a reopenable version.');
+      return;
+    }
+    setImageSrc(scan.thumbnail || null);
+    setTokenBlocks(scan.tokenBlocks);
+    setShowTranslations(false);
+    setShowFurigana(true);
+    setSelectedToken(null);
+    setPhase('results');
   }
 
   // Called from WordModal when user taps "Add to Flashcards"
@@ -155,6 +210,8 @@ export default function App() {
                   </div>
                   <Upload onFile={handleFile} />
                 </>
+              ) : activeTab === 'history' ? (
+                <HistoryTab onOpenScan={handleOpenScan} />
               ) : (
                 <FlashcardsTab
                   decks={decks}
@@ -177,8 +234,11 @@ export default function App() {
                 </div>
                 <span>Scan</span>
               </button>
-              <button className="nav-item" disabled>
-                <div className="nav-icon-bg">
+              <button
+                className={`nav-item${activeTab === 'history' ? ' active' : ''}`}
+                onClick={() => setActiveTab('history')}
+              >
+                <div className={`nav-icon-bg${activeTab === 'history' ? ' active' : ''}`}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
                   </svg>
