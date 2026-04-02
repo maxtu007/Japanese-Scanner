@@ -14,9 +14,9 @@ export default function App() {
   const [phase, setPhase] = useState('upload'); // 'upload' | 'processing' | 'results'
   const [status, setStatus] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
-  const [tokenBlocks, setTokenBlocks] = useState([]); // [{ sentences: ChunkUnit[][] }]
-  const [translation, setTranslation] = useState('');
+  const [tokenBlocks, setTokenBlocks] = useState([]); // [{ sentences: { tokens, translation }[] }]
   const [selectedToken, setSelectedToken] = useState(null);
+  const [showTranslations, setShowTranslations] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [savedWords, setSavedWords] = useState([]);
   const [error, setError] = useState(null);
@@ -29,8 +29,6 @@ export default function App() {
     setImageSrc(src);
     setPhase('processing');
     setError(null);
-
-    let translation = '';
 
     try {
       const t0 = performance.now();
@@ -72,20 +70,24 @@ export default function App() {
 
       const rawCombined = cleanedRegions.join('\n\n');
 
-      // Haiku reconstructs clean readable Japanese + translates
+      // Haiku reconstructs clean readable Japanese, segments by sentence, translates each
       setStatus('Translating…');
-      const { japanese: normalizedJapanese, translation: tx } = await cleanAndTranslate(rawCombined);
-      translation = tx;
+      const { sentences: sentenceTexts, translations } = await cleanAndTranslate(rawCombined);
       ts('cleanAndTranslate done');
 
-      // Tokenize Haiku's reconstructed Japanese output (not raw OCR)
+      // Tokenize each Haiku sentence and pair with its translation
       setStatus('Processing text…');
-      const sentences = await tokenizeLines(normalizedJapanese || rawCombined);
-      ts('tokenizeLines done');
-      const blocks = sentences.length > 0 ? [{ sentences }] : [];
+      const pairedSentences = [];
+      for (let i = 0; i < sentenceTexts.length; i++) {
+        const lines = await tokenizeLines(sentenceTexts[i].replace(/\n+/g, ''));
+        for (const tokens of lines) {
+          pairedSentences.push({ tokens, translation: translations[i] ?? '' });
+        }
+      }
+      ts(`tokenizeLines done (${pairedSentences.length} sentences)`);
 
-      setTokenBlocks(blocks);
-      setTranslation(translation);
+      setTokenBlocks(pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : []);
+      setShowTranslations(false);
       setPhase('results');
     } catch (err) {
       setError(err.message || 'Processing failed. Please try again.');
@@ -105,7 +107,7 @@ export default function App() {
     if (imageSrc) URL.revokeObjectURL(imageSrc);
     setImageSrc(null);
     setTokenBlocks([]);
-    setTranslation('');
+    setShowTranslations(false);
     setSelectedToken(null);
     setPhase('upload');
   }
@@ -186,15 +188,19 @@ export default function App() {
 
         {phase === 'results' && (
           <div className="results">
-            <TextDisplay tokenBlocks={tokenBlocks} onWordClick={setSelectedToken} />
-
-            <div className="translation">
-              <p className="translation-label">Translation</p>
-              <p className="translation-text">
-                {translation || 'Translation unavailable.'}
-              </p>
+            <div className="results-toolbar">
+              <button
+                className={`translation-toggle${showTranslations ? ' active' : ''}`}
+                onClick={() => setShowTranslations(v => !v)}
+              >
+                {showTranslations ? 'Hide translation' : 'Show translation'}
+              </button>
             </div>
-
+            <TextDisplay
+              tokenBlocks={tokenBlocks}
+              onWordClick={setSelectedToken}
+              showTranslations={showTranslations}
+            />
             <button className="btn-ghost" onClick={handleScanAgain}>
               ← Scan another image
             </button>

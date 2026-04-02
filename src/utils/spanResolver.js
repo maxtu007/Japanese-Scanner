@@ -86,6 +86,23 @@ function isAllKatakana(str) {
 // ── Merge predicates ──────────────────────────────────────────────────────────
 
 /**
+ * Rule 0: number-sequence
+ * Merge adjacent numeral tokens and attach counters.
+ * Examples: 十+八→十八, 十八+歳→十八歳, 二+十+年→二十年
+ * Must fire before isNonMergeableNoun guards which block 数 and 助数詞.
+ */
+function checkNumberSequence(left, right) {
+  const leftD1  = headToken(left).pos_detail_1;
+  const rightD1 = headToken(right).pos_detail_1;
+  if (left.pos !== '名詞' || right.pos !== '名詞') return null;
+  // Adjacent numerals: 十 + 八 → 十八
+  if (leftD1 === '数' && rightD1 === '数') return { merge: true, reason: 'number-sequence' };
+  // Numeral + counter: 十八 + 歳 → 十八歳
+  if (leftD1 === '数' && rightD1 === '助数詞') return { merge: true, reason: 'number-counter' };
+  return null;
+}
+
+/**
  * Rule 1: prefix-attach
  * 接頭詞 (prefix) units unconditionally bind to the immediately following unit.
  * Examples: お+茶→お茶, ご+飯→ご飯, 超+高速→超高速, 不+可能→不可能
@@ -152,6 +169,7 @@ function shouldMerge(left, right) {
 
   // Rules in priority order — first match wins
   return (
+    checkNumberSequence(left, right) ??
     checkPrefixAttach(left, right) ??
     checkKatakanaCompound(left, right) ??
     checkNounCompound(left, right)

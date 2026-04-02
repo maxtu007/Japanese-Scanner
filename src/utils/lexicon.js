@@ -17,11 +17,16 @@
  */
 
 import compoundVerbs from '../data/compound-verbs.json';
+import compoundNouns from '../data/compound-nouns.json';
 
-// Build a Map at module load time for O(1) lookup.
+// Build Maps at module load time for O(1) lookup.
 // Skip entries starting with "_" (metadata comments).
 const LEXICON = new Map(
   Object.entries(compoundVerbs).filter(([k]) => !k.startsWith('_'))
+);
+
+const NOUN_LEXICON = new Map(
+  Object.entries(compoundNouns).filter(([k]) => !k.startsWith('_'))
 );
 
 /**
@@ -66,6 +71,20 @@ export function matchLexicon(tokens) {
         if (LEXICON.has(key)) {
           hit = { length: len, lemma: key, reading: LEXICON.get(key) };
           break;
+        }
+      }
+    }
+
+    if (!hit) {
+      // Check noun lexicon (compound nouns kuromoji splits incorrectly)
+      for (let len = 3; len >= 2 && !hit; len--) {
+        if (i + len > tokens.length) continue;
+        const span = tokens.slice(i, i + len);
+        for (const key of spanKeys(span)) {
+          if (NOUN_LEXICON.has(key)) {
+            hit = { length: len, lemma: key, reading: NOUN_LEXICON.get(key), type: 'noun' };
+            break;
+          }
         }
       }
     }

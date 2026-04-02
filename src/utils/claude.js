@@ -98,9 +98,9 @@ export function preprocessOCRText(text) {
 }
 
 // Combined clean + translate in a single Haiku call.
-// Replaces the old two-call sequence (cleanOCRText → translateText) to save one network round trip.
+// Returns per-sentence arrays for aligned display.
 export async function cleanAndTranslate(rawText) {
-  if (!rawText || !rawText.trim()) return { japanese: rawText, translation: '' };
+  if (!rawText || !rawText.trim()) return { sentences: [], translations: [], translation: '' };
 
   if (!apiKey) {
     throw new Error(
@@ -122,12 +122,13 @@ export async function cleanAndTranslate(rawText) {
    - Normalize spacing and punctuation to standard Japanese conventions
    - Reconstruct natural sentences from fragmented lines
    - Remove noise, stray symbols, and OCR artifacts
-   - Output the text as a learner would naturally read it, preserving sentence boundaries with newlines
+   - Split the output into individual sentences at sentence-ending punctuation (。！？)
+   - Each array entry must be exactly one complete sentence
 
-2. Translate the reconstructed Japanese to natural English.
+2. Translate each sentence to natural English (one translation per sentence, same order).
 
 Respond ONLY with valid JSON — no markdown, no explanation:
-{"japanese":"clean reconstructed japanese here","translation":"english translation here"}
+{"sentences":["sentence 1","sentence 2"],"translations":["translation 1","translation 2"]}
 
 Raw OCR text:
 ${rawText}`,
@@ -138,15 +139,14 @@ ${rawText}`,
   const raw = (response.content[0]?.text ?? '').trim();
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) {
-    // Fallback: if model didn't return JSON, use raw as japanese, no translation
-    return { japanese: rawText, translation: '' };
+    return { sentences: [rawText], translations: [''], translation: '' };
   }
 
   const result = JSON.parse(match[0]);
-  return {
-    japanese: (result.japanese || rawText).trim(),
-    translation: (result.translation || '').trim(),
-  };
+  const sentences = Array.isArray(result.sentences) ? result.sentences.map(s => s.trim()).filter(Boolean) : [rawText];
+  const translations = Array.isArray(result.translations) ? result.translations.map(t => t.trim()) : [];
+  const translation = translations.join(' ');
+  return { sentences, translations, translation };
 }
 
 // Kept for any direct callers, but no longer used in the main scan pipeline.

@@ -291,7 +291,7 @@ export function resolveChunks(tokens) {
       while (i < tokens.length && verbTailContinues(group, tokens[i])) {
         group.push(tokens[i++]);
       }
-      result.push(makeChunk(group, lhit.lemma, 'compound-verb'));
+      result.push(makeChunk(group, lhit.lemma, lhit.type ?? 'compound-verb'));
       continue;
     }
 

@@ -29,19 +29,22 @@ function WordToken({ token, onClick }) {
   );
 }
 
-// Each block = one speech bubble / text region from Google Vision.
-// Renders with clear visual separation so manga panels don't bleed into each other.
-export default function TextDisplay({ tokenBlocks, onWordClick }) {
+export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations }) {
   return (
     <div className="text-display">
       {tokenBlocks.map((block, bi) => (
         <div key={bi} className="text-block">
-          {block.sentences.map((line, li) => (
-            <p key={li} className="text-line">
-              {line.map((token, ti) => (
-                <WordToken key={ti} token={token} onClick={onWordClick} />
-              ))}
-            </p>
+          {block.sentences.map((sent, li) => (
+            <div key={li} className="sentence-unit">
+              <p className="text-line">
+                {sent.tokens.map((token, ti) => (
+                  <WordToken key={ti} token={token} onClick={onWordClick} />
+                ))}
+              </p>
+              {showTranslations && sent.translation && (
+                <p className="sentence-translation">{sent.translation}</p>
+              )}
+            </div>
           ))}
         </div>
       ))}
