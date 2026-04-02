@@ -342,7 +342,21 @@ body {
 .text-display {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 28px; /* gap between blocks */
+}
+
+/* Each block = one speech bubble / OCR text region */
+.text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* gap between sentences within a block */
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.text-block:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .text-line {

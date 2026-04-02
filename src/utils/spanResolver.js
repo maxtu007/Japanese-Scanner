@@ -33,16 +33,21 @@ function makeSpan(units, reason) {
   const partOfSpeech = units[0].partOfSpeech;
   const sourceTokens = units.flatMap(u => u.sourceTokens);
   const type         = units[0].type ?? 'other';
+  const grammarLabel = units[0].grammarLabel ?? null;
+  const lookupTarget = units[0].lookupTarget ?? lemma;
 
   return {
     surfaceForm,
     lemma,
     reading,
+    lookupTarget,
     partOfSpeech,
     startIndex,
     endIndex,
     sourceTokens,
     type,
+    grammarLabel,
+    locked: false,  // merged fallback spans are never locked
     // Backward-compat aliases required by TextDisplay, WordModal, App
     surface_form: surfaceForm,
     basic_form:   lemma,
@@ -137,8 +142,8 @@ function checkNounCompound(left, right) {
 // ── Master dispatcher ─────────────────────────────────────────────────────────
 
 function shouldMerge(left, right) {
-  // Grammar patterns are never absorbed into noun compounds or prefix spans.
-  if (left.type === 'grammar' || right.type === 'grammar') return null;
+  // Locked spans (grammar patterns) are never absorbed into noun compounds or prefix spans.
+  if (left.locked || right.locked) return null;
 
   // Hard guards: particles, punctuation, and auxiliaries can never be merged into
   if (right.pos === '助詞')   return null;

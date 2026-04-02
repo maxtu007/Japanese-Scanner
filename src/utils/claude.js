@@ -114,19 +114,22 @@ export async function cleanAndTranslate(rawText) {
     messages: [
       {
         role: 'user',
-        content: `You are processing pre-structured Japanese text. Do two things in one pass:
+        content: `You are processing raw OCR text extracted from a Japanese image (manga, signage, printed text). Do two things:
 
-1. Lightly normalize the Japanese text:
-   - Remove remaining OCR artifacts (stray symbols, broken spacing)
-   - Preserve all paragraph breaks and sentence boundaries as-is
-   - Do not merge lines, reorder content, or paraphrase
+1. Reconstruct clean, readable Japanese:
+   - Fix OCR errors and garbled or broken characters
+   - Reconnect words split across lines (vertical text often fragments words)
+   - Normalize spacing and punctuation to standard Japanese conventions
+   - Reconstruct natural sentences from fragmented lines
+   - Remove noise, stray symbols, and OCR artifacts
+   - Output the text as a learner would naturally read it, preserving sentence boundaries with newlines
 
-2. Translate the normalized text to natural English.
+2. Translate the reconstructed Japanese to natural English.
 
 Respond ONLY with valid JSON — no markdown, no explanation:
-{"japanese":"normalized japanese text here","translation":"english translation here"}
+{"japanese":"clean reconstructed japanese here","translation":"english translation here"}
 
-Text:
+Raw OCR text:
 ${rawText}`,
       },
     ],

@@ -329,4 +329,275 @@ export const GRAMMAR_PATTERNS = [
     ],
   },
 
+  // ── Postpositional phrase patterns ────────────────────────────────────────
+  //
+  // These are particle-verb-te sequences that function as compound postpositions.
+  // They must be locked before the lexer fires because:
+  //   - The leading に or と is a plain particle in isolation but specialized here
+  //   - The verb (よる, つく, する, とる, 関する, 対する) is non-compositional
+  //   - Splitting them produces unlearnable fragments (に / よっ / て)
+  //
+  // Kuromoji POS for the verb component:
+  //   よっ (よる)     → 動詞,自立,  basic=よる
+  //   つい (つく)     → 動詞,自立,  basic=つく
+  //   し  (する)      → 動詞,自立,  basic=する
+  //   とっ (とる)     → 動詞,自立,  basic=とる
+  //   関し (関する)   → 動詞,自立,  basic=関する
+  //   対し (対する)   → 動詞,自立,  basic=対する
+
+  // 27. によって — "by (means of) / depending on / due to"
+  {
+    id: 'ni-yotte', type: 'grammar',
+    lemma: 'によって', reading: 'によって',
+    grammarLabel: 'によって',
+    tokens: [
+      { basicForm: 'に',   pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: 'よる', pos: '動詞'                         },
+      { surface:   'て',   pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 28. によると — "according to"
+  {
+    id: 'ni-yoruto', type: 'grammar',
+    lemma: 'によると', reading: 'によると',
+    grammarLabel: 'によると',
+    tokens: [
+      { basicForm: 'に',   pos: '助詞', posDetail1: '格助詞' },
+      { basicForm: 'よる', pos: '動詞'                       },
+      { basicForm: 'と',   pos: '助詞'                       },
+    ],
+  },
+
+  // 29. について — "about / concerning / regarding"
+  {
+    id: 'ni-tsuite', type: 'grammar',
+    lemma: 'について', reading: 'について',
+    grammarLabel: 'について',
+    tokens: [
+      { basicForm: 'に',   pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: 'つく', pos: '動詞'                         },
+      { surface:   'て',   pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 30. に対して — "towards / against / in contrast to"
+  {
+    id: 'ni-taishite', type: 'grammar',
+    lemma: 'に対して', reading: 'にたいして',
+    grammarLabel: 'に対して',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '対する', pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 31. として — "as / in the capacity of / acting as"
+  {
+    id: 'to-shite', type: 'grammar',
+    lemma: 'として', reading: 'として',
+    grammarLabel: 'として',
+    tokens: [
+      { basicForm: 'と',   pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: 'する', pos: '動詞'                         },
+      { surface:   'て',   pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 32. にとって — "for / from the standpoint of"
+  {
+    id: 'ni-totte', type: 'grammar',
+    lemma: 'にとって', reading: 'にとって',
+    grammarLabel: 'にとって',
+    tokens: [
+      { basicForm: 'に',   pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: 'とる', pos: '動詞'                         },
+      { surface:   'て',   pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 33. に関して — "regarding / in relation to"
+  {
+    id: 'ni-kanshite', type: 'grammar',
+    lemma: 'に関して', reading: 'にかんして',
+    grammarLabel: 'に関して',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '関する', pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // ── Additional postpositional patterns ────────────────────────────────────
+  //
+  // Same 3-token structure: に(格助詞) + V(動詞) + て(接続助詞)
+  // All lock に together with the following verb+te so the particle is never
+  // emitted as an isolated fragment.
+
+  // 34. において — "in / at / regarding" (formal written register)
+  // おい = 置く 連用形, basic_form=おく
+  {
+    id: 'ni-oite', type: 'grammar',
+    lemma: 'において', reading: 'において',
+    grammarLabel: 'において',
+    tokens: [
+      { basicForm: 'に',   pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: 'おく', pos: '動詞'                         },
+      { surface:   'て',   pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 35. に反して — "contrary to / against"
+  {
+    id: 'ni-hanshite', type: 'grammar',
+    lemma: 'に反して', reading: 'にはんして',
+    grammarLabel: 'に反して',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '反する', pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 36. に従って — "in accordance with / following"
+  {
+    id: 'ni-shitagatte', type: 'grammar',
+    lemma: 'に従って', reading: 'にしたがって',
+    grammarLabel: 'に従って',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '従う',   pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 37. に比べて — "compared to / in comparison with"
+  {
+    id: 'ni-kurabete', type: 'grammar',
+    lemma: 'に比べて', reading: 'にくらべて',
+    grammarLabel: 'に比べて',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '比べる', pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 38. に加えて — "in addition to / on top of"
+  {
+    id: 'ni-kuwaete', type: 'grammar',
+    lemma: 'に加えて', reading: 'にくわえて',
+    grammarLabel: 'に加えて',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '加える', pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 39. に基づいて — "based on / in accordance with"
+  // 基づい = 基づく 連用形, basic_form=基づく
+  {
+    id: 'ni-motozuite', type: 'grammar',
+    lemma: 'に基づいて', reading: 'にもとづいて',
+    grammarLabel: 'に基づいて',
+    tokens: [
+      { basicForm: 'に',     pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: '基づく', pos: '動詞'                         },
+      { surface:   'て',     pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // 40. によれば — "according to" (conditional form of よる)
+  // よれ = よる 仮定形, basic_form=よる; ば = 助詞,接続助詞
+  {
+    id: 'ni-yoreba', type: 'grammar',
+    lemma: 'によれば', reading: 'によれば',
+    grammarLabel: 'によれば',
+    tokens: [
+      { basicForm: 'に',   pos: '助詞', posDetail1: '格助詞'   },
+      { basicForm: 'よる', pos: '動詞'                         },
+      { surface:   'ば',   pos: '助詞', posDetail1: '接続助詞' },
+    ],
+  },
+
+  // ── Modal / evidential patterns ───────────────────────────────────────────
+  //
+  // These are 2-token patterns: functional noun/aux + copula/auxiliary.
+  // They must fire before the lexer's noun pattern swallows よう/そう standalone.
+
+  // 41. ようだ — "seems like / appears to be"
+  // よう 名詞,非自立 + だ 助動詞 (includes conjugated forms: ようで, ようだっ, etc.)
+  {
+    id: 'you-da', type: 'grammar',
+    lemma: 'ようだ', reading: 'ようだ',
+    grammarLabel: 'ようだ',
+    tokens: [
+      { basicForm: 'よう', pos: '名詞', posDetail1: '非自立' },
+      { basicForm: 'だ',   pos: '助動詞'                     },
+    ],
+  },
+
+  // 42. ようです — polite form of ようだ
+  {
+    id: 'you-desu', type: 'grammar',
+    lemma: 'ようだ', reading: 'ようです',
+    grammarLabel: 'ようだ',
+    tokens: [
+      { basicForm: 'よう',  pos: '名詞', posDetail1: '非自立' },
+      { basicForm: 'です',  pos: '助動詞'                     },
+    ],
+  },
+
+  // 43. そうだ — "looks like / I heard that" (hearsay / appearance)
+  // そう is tagged 名詞,非自立 in this construction
+  {
+    id: 'sou-da', type: 'grammar',
+    lemma: 'そうだ', reading: 'そうだ',
+    grammarLabel: 'そうだ',
+    tokens: [
+      { basicForm: 'そう', pos: '名詞', posDetail1: '非自立' },
+      { basicForm: 'だ',   pos: '助動詞'                     },
+    ],
+  },
+
+  // 44. べきだ — "should / ought to"
+  // べき is an auxiliary (助動詞) in IPAdic, basic_form=べし
+  {
+    id: 'beki-da', type: 'grammar',
+    lemma: 'べきだ', reading: 'べきだ',
+    grammarLabel: 'べきだ',
+    tokens: [
+      { basicForm: 'べし', pos: '助動詞'                     },
+      { basicForm: 'だ',   pos: '助動詞'                     },
+    ],
+  },
+
+  // ── Temporal / concessive nominalized patterns ────────────────────────────
+
+  // 45. のに — "even though / despite / in order to"
+  // の 名詞,非自立 + に 助詞,格助詞
+  {
+    id: 'no-ni', type: 'grammar',
+    lemma: 'のに', reading: 'のに',
+    grammarLabel: 'のに',
+    tokens: [
+      { basicForm: 'の', pos: '名詞', posDetail1: '非自立' },
+      { basicForm: 'に', pos: '助詞', posDetail1: '格助詞' },
+    ],
+  },
+
+  // 46. ので — "because / so" (soft causal connector)
+  // の 名詞,非自立 + で 助動詞 (て-form of だ)
+  {
+    id: 'no-de', type: 'grammar',
+    lemma: 'ので', reading: 'ので',
+    grammarLabel: 'ので',
+    tokens: [
+      { basicForm: 'の', pos: '名詞', posDetail1: '非自立' },
+      { basicForm: 'だ', pos: '助動詞'                     },
+    ],
+  },
+
 ];
