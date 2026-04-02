@@ -33,7 +33,7 @@ body {
 .app {
   max-width: 700px;
   margin: 0 auto;
-  padding: 0 20px 80px;
+  padding: 0 20px 120px;
 }
 
 /* ── Home Screen ── */
@@ -257,6 +257,10 @@ body {
 
 /* ── Header ── */
 .header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -411,33 +415,52 @@ rt {
   cursor: default;
 }
 
-/* ── Results toolbar (translation toggle) ── */
-.results-toolbar {
+/* ── Fixed Bottom Bar ── */
+.results-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  padding: 12px 20px 28px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  gap: 10px;
+  z-index: 20;
 }
 
-.translation-toggle {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 13px;
+.bar-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  font-size: 14px;
   font-weight: 500;
   color: var(--muted);
+  font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
 }
 
-.translation-toggle:hover {
+.bar-pill:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.translation-toggle.active {
-  border-color: var(--accent);
+.bar-pill.active {
   background: var(--accent-light);
+  border-color: var(--accent);
   color: var(--accent);
+}
+
+.bar-pill-icon {
+  font-size: 15px;
+  line-height: 1;
 }
 
 /* ── Error Banner ── */
@@ -557,14 +580,15 @@ rt {
 }
 
 .modal-def-list li {
-  font-size: 15px;
-  line-height: 1.55;
-  padding: 9px 0;
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 11px 0;
   border-bottom: 1px solid var(--border);
   counter-increment: def-counter;
   display: flex;
   gap: 10px;
-  color: var(--text);
+  color: #111;
+  font-weight: 450;
 }
 
 .modal-def-list li::before {
@@ -585,6 +609,26 @@ rt {
 
 .modal-def-list li:last-child {
   border-bottom: none;
+}
+
+/* ── Contextual explanation ── */
+.modal-explanation {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-bottom: 20px;
+}
+
+.explanation-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #3a3a3a;
+}
+
+.explanation-loading {
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.25em;
 }
 
 .def-loading,

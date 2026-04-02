@@ -15,8 +15,10 @@ export default function App() {
   const [status, setStatus] = useState('');
   const [imageSrc, setImageSrc] = useState(null);
   const [tokenBlocks, setTokenBlocks] = useState([]); // [{ sentences: { tokens, translation }[] }]
-  const [selectedToken, setSelectedToken] = useState(null);
+  const [selectedToken, setSelectedToken] = useState(null);   // { token, sentence }
+
   const [showTranslations, setShowTranslations] = useState(false);
+  const [showFurigana, setShowFurigana] = useState(true);
   const [showSaved, setShowSaved] = useState(false);
   const [savedWords, setSavedWords] = useState([]);
   const [error, setError] = useState(null);
@@ -188,18 +190,11 @@ export default function App() {
 
         {phase === 'results' && (
           <div className="results">
-            <div className="results-toolbar">
-              <button
-                className={`translation-toggle${showTranslations ? ' active' : ''}`}
-                onClick={() => setShowTranslations(v => !v)}
-              >
-                {showTranslations ? 'Hide translation' : 'Show translation'}
-              </button>
-            </div>
             <TextDisplay
               tokenBlocks={tokenBlocks}
-              onWordClick={setSelectedToken}
+              onWordClick={(token, sentence) => setSelectedToken({ token, sentence })}
               showTranslations={showTranslations}
+              showFurigana={showFurigana}
             />
             <button className="btn-ghost" onClick={handleScanAgain}>
               ← Scan another image
@@ -217,15 +212,17 @@ export default function App() {
 
       {selectedToken && (
         <WordModal
-          token={selectedToken}
+          token={selectedToken.token}
+          sentence={selectedToken.sentence}
           onClose={() => setSelectedToken(null)}
           onSave={handleSave}
           isSaved={savedWords.some((w) => {
+            const t = selectedToken.token;
             const target =
-              selectedToken.lookupTarget
-                ?? (selectedToken.basic_form && selectedToken.basic_form !== '*'
-                    ? selectedToken.basic_form
-                    : selectedToken.surface_form);
+              t.lookupTarget
+                ?? (t.basic_form && t.basic_form !== '*'
+                    ? t.basic_form
+                    : t.surface_form);
             return w.word === target;
           })}
         />
@@ -237,6 +234,25 @@ export default function App() {
           onClose={() => setShowSaved(false)}
           onRemove={handleRemove}
         />
+      )}
+
+      {phase === 'results' && (
+        <div className="results-bottom-bar">
+          <button
+            className={`bar-pill${showTranslations ? ' active' : ''}`}
+            onClick={() => setShowTranslations(v => !v)}
+          >
+            <span className="bar-pill-icon">文</span>
+            Translation
+          </button>
+          <button
+            className={`bar-pill${!showFurigana ? ' active' : ''}`}
+            onClick={() => setShowFurigana(v => !v)}
+          >
+            <span className="bar-pill-icon">ふ</span>
+            Furigana
+          </button>
+        </div>
       )}
     </div>
   );

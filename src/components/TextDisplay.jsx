@@ -3,7 +3,7 @@ import { toHiragana } from '../utils/japanese';
 const KANJI = /[\u4E00-\u9FFF\u3400-\u4DBF]/;
 const PUNCT_RE = /^[\s。、！？…「」『』【】（）〔〕・～—\-\/]+$/;
 
-function WordToken({ token, onClick }) {
+function WordToken({ token, sentence, showFurigana, onClick }) {
   const surface = token.surface_form;
 
   if (PUNCT_RE.test(surface) || token.pos === '記号') {
@@ -11,11 +11,11 @@ function WordToken({ token, onClick }) {
   }
 
   const reading = toHiragana(token.reading);
-  const showFurigana = KANJI.test(surface) && reading && reading !== surface;
+  const showRuby = showFurigana && KANJI.test(surface) && reading && reading !== surface;
 
-  if (showFurigana) {
+  if (showRuby) {
     return (
-      <ruby className="token" onClick={() => onClick(token)}>
+      <ruby className="token" onClick={() => onClick(token, sentence)}>
         {surface}
         <rt>{reading}</rt>
       </ruby>
@@ -23,29 +23,38 @@ function WordToken({ token, onClick }) {
   }
 
   return (
-    <span className="token" onClick={() => onClick(token)}>
+    <span className="token" onClick={() => onClick(token, sentence)}>
       {surface}
     </span>
   );
 }
 
-export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations }) {
+export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations, showFurigana }) {
   return (
     <div className="text-display">
       {tokenBlocks.map((block, bi) => (
         <div key={bi} className="text-block">
-          {block.sentences.map((sent, li) => (
-            <div key={li} className="sentence-unit">
-              <p className="text-line">
-                {sent.tokens.map((token, ti) => (
-                  <WordToken key={ti} token={token} onClick={onWordClick} />
-                ))}
-              </p>
-              {showTranslations && sent.translation && (
-                <p className="sentence-translation">{sent.translation}</p>
-              )}
-            </div>
-          ))}
+          {block.sentences.map((sent, li) => {
+            const sentenceText = sent.tokens.map(t => t.surface_form).join('');
+            return (
+              <div key={li} className="sentence-unit">
+                <p className="text-line">
+                  {sent.tokens.map((token, ti) => (
+                    <WordToken
+                      key={ti}
+                      token={token}
+                      sentence={sentenceText}
+                      showFurigana={showFurigana}
+                      onClick={onWordClick}
+                    />
+                  ))}
+                </p>
+                {showTranslations && sent.translation && (
+                  <p className="sentence-translation">{sent.translation}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>

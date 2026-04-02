@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { lookupWord } from '../utils/jisho';
 import { toHiragana } from '../utils/japanese';
+import { explainWord } from '../utils/explain';
 
-export default function WordModal({ token, onClose, onSave, isSaved }) {
-  const [lookup,  setLookup]  = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [added,   setAdded]   = useState(isSaved);
+export default function WordModal({ token, sentence, onClose, onSave, isSaved }) {
+  const [lookup,      setLookup]      = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [added,       setAdded]       = useState(isSaved);
+  const [explanation, setExplanation] = useState(null);
+  const [explaining,  setExplaining]  = useState(false);
 
   const surface      = token.surface_form;
   const baseForm     = token.basic_form && token.basic_form !== '*' ? token.basic_form : surface;
@@ -16,11 +19,13 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
 
   useEffect(() => setAdded(isSaved), [isSaved]);
 
+  // Dictionary lookup
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setLookup(null);
     setError(null);
+    setExplanation(null);
 
     lookupWord(lookupTarget, surface)
       .then(result => {
@@ -36,6 +41,24 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
 
     return () => { cancelled = true; };
   }, [lookupTarget, surface]);
+
+  // Contextual explanation — fires after dictionary resolves
+  useEffect(() => {
+    if (loading || !sentence) return;
+    let cancelled = false;
+    setExplaining(true);
+
+    const reading = lookup?.reading || localReading;
+    explainWord(lookupTarget, reading, sentence)
+      .then(text => {
+        if (!cancelled) { setExplanation(text); setExplaining(false); }
+      })
+      .catch(() => {
+        if (!cancelled) setExplaining(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [loading, lookupTarget, sentence]);
 
   function handleOverlayClick(e) {
     if (e.target === e.currentTarget) onClose();
@@ -79,7 +102,7 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
           <p className="modal-reading">{displayReading}</p>
         )}
 
-        {/* Grammar label (for grammar patterns) */}
+        {/* Grammar label */}
         {grammarLabel && (
           <p className="modal-grammar-label">{grammarLabel}</p>
         )}
@@ -109,6 +132,17 @@ export default function WordModal({ token, onClose, onSave, isSaved }) {
             <p className="def-empty">No definition found</p>
           )}
         </div>
+
+        {/* Contextual explanation */}
+        {(explaining || explanation) && (
+          <div className="modal-explanation">
+            {explaining ? (
+              <p className="explanation-loading">…</p>
+            ) : (
+              <p className="explanation-text">{explanation}</p>
+            )}
+          </div>
+        )}
 
         <button
           className="btn-save"
