@@ -9,7 +9,7 @@ import AudioBar from './components/AudioBar';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
-import { tokenizeLines, hasJapanese } from './utils/japanese';
+import { tokenizeLines, tokenizeSentence, hasJapanese } from './utils/japanese';
 import { loadDecks } from './utils/deckStorage';
 import { addScan } from './utils/historyStorage';
 
@@ -99,8 +99,8 @@ export default function App() {
       setStatus('Processing text…');
       const pairedSentences = [];
       for (let i = 0; i < sentenceTexts.length; i++) {
-        const lines = await tokenizeLines(sentenceTexts[i].replace(/\n+/g, ''));
-        for (const tokens of lines) {
+        const tokens = await tokenizeSentence(sentenceTexts[i].replace(/\n+/g, ''));
+        if (tokens.length > 0) {
           pairedSentences.push({ tokens, translation: translations[i] ?? '' });
         }
       }

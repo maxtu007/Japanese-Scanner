@@ -44,6 +44,16 @@ function splitSentences(text) {
   return marked.split('\0').map(s => s.trim()).filter(s => s.length > 0);
 }
 
+// Tokenize a single pre-split sentence without any further sentence splitting.
+// Use this when the caller already has clean sentence boundaries (e.g. from Claude).
+export async function tokenizeSentence(text) {
+  const tokenizer = await getTokenizer();
+  if (!text?.trim()) return [];
+  const tokens = tokenizer.tokenize(text.trim());
+  const rawChunks = resolveChunks(tokens);
+  return resolveSpans(rawChunks, text.trim());
+}
+
 export async function tokenizeLines(text) {
   const tokenizer = await getTokenizer();
   if (!text?.trim()) return [];
