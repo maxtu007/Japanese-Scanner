@@ -203,7 +203,7 @@ export default function App() {
                 <>
                   <div className="home-header">
                     <div className="wordmark">Un<em>blur</em></div>
-                    <div className="tagline">Point. Tap. Understand.</div>
+                    <div className="tagline">Scan. Boom. Understand.</div>
                   </div>
                   <div className="home-illus">
                     <img src="/books.png" alt="" />

@@ -58,7 +58,8 @@ export default function Upload({ onFile }) {
           <div className="upload-bar-label">Upload an image</div>
           <div className="upload-bar-hint">PNG · JPG · max 5 MB</div>
         </div>
-        <div className="upload-bar-arrow">
+        <div className="upload-bar-browse">
+          Browse
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="13 6 19 12 13 18"/>
