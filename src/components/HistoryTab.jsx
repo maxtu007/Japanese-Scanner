@@ -356,13 +356,15 @@ export default function HistoryTab({ onOpenScan }) {
                 className={`history-folder-header${expanded ? ' expanded' : ''}`}
                 onClick={() => toggleFolder(folder.id)}
               >
-                <svg className="folder-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  {expanded
-                    ? <polyline points="18 15 12 9 6 15"/>
-                    : <polyline points="6 9 12 15 18 9"/>}
-                </svg>
                 <span className="folder-name">{folder.name}</span>
-                <span className="folder-count">{folder.scans.length}</span>
+                <span className="folder-count">{folder.scans.length} scan{folder.scans.length !== 1 ? 's' : ''}</span>
+                <span className="folder-chevron">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:'100%',height:'100%'}}>
+                    {expanded
+                      ? <polyline points="18 15 12 9 6 15"/>
+                      : <polyline points="6 9 12 15 18 9"/>}
+                  </svg>
+                </span>
               </button>
 
               {expanded && folder.scans.length > 0 && (

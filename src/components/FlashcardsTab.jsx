@@ -37,6 +37,8 @@ export default function FlashcardsTab({ decks: initialDecks, onDecksChange }) {
     setStudying(null);
   }
 
+  const totalWords = decks.reduce((sum, d) => sum + d.cards.length, 0);
+
   const q = search.trim().toLowerCase();
   const filtered = q
     ? decks.map(d => ({
@@ -64,6 +66,9 @@ export default function FlashcardsTab({ decks: initialDecks, onDecksChange }) {
     <div className="flashcards-tab">
       <div className="flashcards-header">
         <h1 className="flashcards-title">Flashcards</h1>
+        <div className="flashcards-stats">
+          {totalWords} word{totalWords !== 1 ? 's' : ''} · {decks.length} deck{decks.length !== 1 ? 's' : ''}
+        </div>
       </div>
 
       <div className="fc-search-wrap">
@@ -95,15 +100,18 @@ export default function FlashcardsTab({ decks: initialDecks, onDecksChange }) {
                 className={`fc-deck-header${expanded ? ' expanded' : ''}`}
                 onClick={() => toggleDeck(deck.id)}
               >
+                <span className="fc-deck-name">{deck.name}</span>
+                <span className="fc-deck-meta">
+                  {dueCount > 0 && <span className="fc-due-badge">{dueCount} due</span>}
+                  <span className="fc-deck-count">{deck.cards.length} cards</span>
+                </span>
                 <span className="fc-deck-chevron">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     {expanded
                       ? <polyline points="18 15 12 9 6 15"/>
                       : <polyline points="6 9 12 15 18 9"/>}
                   </svg>
                 </span>
-                <span className="fc-deck-name">{deck.name}</span>
-                <span className="fc-deck-count">{deck.cards.length}</span>
               </button>
 
               {expanded && (
