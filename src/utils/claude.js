@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+import { apiFetch } from './apiClient';
 
 export function preprocessOCRText(text) {
   if (!text) return '';
@@ -30,10 +30,9 @@ export function preprocessOCRText(text) {
 export async function cleanAndTranslate(rawText) {
   if (!rawText?.trim()) return { sentences: [], translations: [], translation: '' };
 
-  const res = await fetch(`${API_BASE}/api/translate`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ rawText }),
+  const res = await apiFetch('/api/translate', {
+    method: 'POST',
+    body:   JSON.stringify({ rawText }),
   });
 
   if (!res.ok) {

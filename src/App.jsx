@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Upload from './components/Upload';
 import TextDisplay from './components/TextDisplay';
 import WordModal from './components/WordModal';
@@ -6,12 +6,16 @@ import AddToDeckModal from './components/AddToDeckModal';
 import FlashcardsTab from './components/FlashcardsTab';
 import HistoryTab from './components/HistoryTab';
 import AudioBar from './components/AudioBar';
+import SplashScreen from './components/SplashScreen';
+import OnboardingScreen from './components/OnboardingScreen';
+import { useAuth } from './contexts/AuthContext';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
 import { tokenizeLines, tokenizeSentence, hasJapanese } from './utils/japanese';
-import { loadDecks } from './utils/deckStorage';
-import { addScan } from './utils/historyStorage';
+import { loadDecks } from './utils/supabaseDecks';
+import { addScan } from './utils/supabaseHistory';
+import { migrateLocalStorageToSupabase } from './utils/migrate';
 
 async function generateThumbnail(objectURL) {
   return new Promise((resolve) => {
@@ -35,6 +39,18 @@ async function generateThumbnail(objectURL) {
 
 
 export default function App() {
+  const { user, session, signOut } = useAuth();
+
+  const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('unblur-onboarded')
+  );
+
+  const handleOnboardingDone = useCallback(() => {
+    localStorage.setItem('unblur-onboarded', '1');
+    setShowOnboarding(false);
+  }, []);
+
   const [phase, setPhase] = useState('upload'); // 'upload' | 'processing' | 'results'
   const [activeTab, setActiveTab] = useState('scan'); // 'scan' | 'history' | 'flashcards'
   const [status, setStatus] = useState('');
@@ -46,14 +62,24 @@ export default function App() {
   const [error, setError] = useState(null);
 
   // Flashcard state
-  const [decks, setDecks] = useState(() => loadDecks());
-  const [pendingFlashcard, setPendingFlashcard] = useState(null); // card data waiting for deck selection
+  const [decks, setDecks] = useState([]);
+  const [pendingFlashcard, setPendingFlashcard] = useState(null);
 
-  // Stable sentence strings for AudioBar — only recomputes when tokenBlocks changes
+  // Stable sentence strings for AudioBar
   const sentenceTexts = useMemo(
     () => tokenBlocks.flatMap(b => b.sentences.map(s => s.tokens.map(t => t.surface_form).join(''))),
     [tokenBlocks]
   );
+
+  // Load decks and run migration once user is authenticated
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      await migrateLocalStorageToSupabase();
+      const decksData = await loadDecks();
+      setDecks(decksData);
+    })();
+  }, [user]);
 
   async function handleFile(file) {
     const src = URL.createObjectURL(file);
@@ -109,7 +135,7 @@ export default function App() {
       setTokenBlocks(pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : []);
       setShowTranslations(false);
 
-      // Save to history
+      // Save to history (Supabase)
       try {
         const thumbnail = src ? await generateThumbnail(src) : '';
         const japanesePreview = pairedSentences
@@ -117,7 +143,7 @@ export default function App() {
           .map(s => s.tokens.map(t => t.surface_form).join(''))
           .join('');
         const titleText = japanesePreview.slice(0, 28) || '(Scan)';
-        addScan({
+        await addScan({
           name: titleText,
           thumbnail,
           japanese: japanesePreview,
@@ -157,16 +183,20 @@ export default function App() {
     setPhase('results');
   }
 
-  // Called from WordModal when user taps "Add to Flashcards"
   function handleRequestAdd(cardData) {
-    setSelectedToken(null); // close WordModal
+    setSelectedToken(null);
     setPendingFlashcard(cardData);
   }
 
-  // Called from AddToDeckModal when a deck is chosen
-  function handleCardAdded(updatedDecks) {
-    setDecks(updatedDecks);
+  async function handleCardAdded() {
     setPendingFlashcard(null);
+    const fresh = await loadDecks();
+    setDecks(fresh);
+  }
+
+  async function handleDecksChange() {
+    const fresh = await loadDecks();
+    setDecks(fresh);
   }
 
   const isAdded = selectedToken
@@ -176,6 +206,14 @@ export default function App() {
         return decks.some(d => d.cards.some(c => c.word === target));
       })()
     : false;
+
+  if (showSplash) {
+    return <SplashScreen onDone={() => setShowSplash(false)} />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingScreen onDone={handleOnboardingDone} />;
+  }
 
   return (
     <div className="app">
@@ -191,7 +229,13 @@ export default function App() {
             <div />
           )}
           <div className="wordmark-sm">Un<em>blur</em></div>
-          <div style={{ width: 36 }} />
+          <button className="signout-btn" onClick={signOut} title="Sign out" aria-label="Sign out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
         </header>
       )}
 
@@ -215,7 +259,7 @@ export default function App() {
               ) : (
                 <FlashcardsTab
                   decks={decks}
-                  onDecksChange={setDecks}
+                  onDecksChange={handleDecksChange}
                 />
               )}
             </div>
@@ -256,14 +300,19 @@ export default function App() {
                 </div>
                 <span>Flashcards</span>
               </button>
-              <button className="nav-item" disabled>
+              <button
+                className="nav-item"
+                onClick={signOut}
+                title="Sign out"
+              >
                 <div className="nav-icon-bg">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
                   </svg>
                 </div>
-                <span>Settings</span>
+                <span>Sign Out</span>
               </button>
             </nav>
           </div>
@@ -309,6 +358,7 @@ export default function App() {
       {pendingFlashcard && (
         <AddToDeckModal
           card={pendingFlashcard}
+          decks={decks}
           onClose={() => setPendingFlashcard(null)}
           onAdded={handleCardAdded}
         />

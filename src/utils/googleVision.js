@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+import { apiFetch } from './apiClient';
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -12,10 +12,9 @@ function fileToBase64(file) {
 export async function extractTextWithGoogle(file) {
   const base64 = await fileToBase64(file);
 
-  const res = await fetch(`${API_BASE}/api/ocr`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ imageData: base64 }),
+  const res = await apiFetch('/api/ocr', {
+    method: 'POST',
+    body:   JSON.stringify({ imageData: base64 }),
   });
 
   if (!res.ok) {

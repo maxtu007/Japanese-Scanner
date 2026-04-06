@@ -1,24 +1,23 @@
 import { useState } from 'react';
-import { loadDecks, createDeck, addCardToDeck } from '../utils/deckStorage';
+import { createDeck, addCardToDeck } from '../utils/supabaseDecks';
 
-export default function AddToDeckModal({ card, onClose, onAdded }) {
-  const [decks, setDecks] = useState(() => loadDecks());
+export default function AddToDeckModal({ card, decks, onClose, onAdded }) {
   const [creatingNew, setCreatingNew] = useState(false);
   const [newDeckName, setNewDeckName] = useState('');
 
-  function handleSelectDeck(deckId) {
-    const updated = addCardToDeck(deckId, card);
-    onAdded(updated);
+  async function handleSelectDeck(deckId) {
+    await addCardToDeck(deckId, card);
+    onAdded();
     onClose();
   }
 
-  function handleCreateDeck() {
+  async function handleCreateDeck() {
     const name = newDeckName.trim();
     if (!name) return;
-    let updated = createDeck(name);
-    const newDeck = updated[updated.length - 1];
-    updated = addCardToDeck(newDeck.id, card);
-    onAdded(updated);
+    const newDecks = await createDeck(name);
+    const newDeck = newDecks[newDecks.length - 1];
+    await addCardToDeck(newDeck.id, card);
+    onAdded();
     onClose();
   }
 

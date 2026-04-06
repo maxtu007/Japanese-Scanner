@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -5,6 +6,7 @@ import { loadJMdict, lookupLocal, isLoaded } from './jmdict.js';
 import rateLimit from 'express-rate-limit';
 import Anthropic from '@anthropic-ai/sdk';
 import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
 
 const app       = express();
 const PORT      = process.env.PORT || 3001;
@@ -17,12 +19,28 @@ app.use(cors({
   origin: [
     'capacitor://localhost',
     'http://localhost:5173',
+    'http://localhost:5174',
     ...(process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
       : []),
   ],
   methods: ['GET', 'POST'],
 }));
+
+// ── Supabase admin client (service role — JWT verification) ──────────────────
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+async function requireAuth(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+  req.user = user;
+  next();
+}
 
 // ── Anthropic client (server-side — no dangerouslyAllowBrowser) ──────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -83,7 +101,7 @@ async function jishoLookup(word) {
 }
 
 // ── OCR route ─────────────────────────────────────────────────────────────────
-app.post('/api/ocr', ocrLimiter, async (req, res) => {
+app.post('/api/ocr', requireAuth, ocrLimiter, async (req, res) => {
   const { imageData } = req.body;
   if (!imageData) return res.status(400).json({ error: 'Missing imageData' });
 
@@ -144,7 +162,7 @@ app.post('/api/ocr', ocrLimiter, async (req, res) => {
 });
 
 // ── Translate route ───────────────────────────────────────────────────────────
-app.post('/api/translate', async (req, res) => {
+app.post('/api/translate', requireAuth, async (req, res) => {
   const { rawText } = req.body;
   if (!rawText?.trim()) return res.json({ sentences: [], translations: [], translation: '' });
 
@@ -188,7 +206,7 @@ ${rawText}`,
 });
 
 // ── Explain route ─────────────────────────────────────────────────────────────
-app.post('/api/explain', explainLimiter, async (req, res) => {
+app.post('/api/explain', requireAuth, explainLimiter, async (req, res) => {
   const { word, reading, sentence } = req.body;
   if (!word || !sentence) return res.status(400).json({ error: 'Missing word or sentence' });
 
@@ -219,7 +237,7 @@ In 1-2 short sentences, explain what "${word}" means in this specific context. B
 });
 
 // ── Lookup route ──────────────────────────────────────────────────────────────
-app.get('/api/lookup', async (req, res) => {
+app.get('/api/lookup', requireAuth, async (req, res) => {
   const tapTime = Date.now();
   const word    = req.query.lemma || req.query.surface;
 

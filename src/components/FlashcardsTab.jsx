@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { loadDecks, createDeck } from '../utils/deckStorage';
+import { createDeck } from '../utils/supabaseDecks';
 import { isDue } from '../utils/srs';
 import StudySession from './StudySession';
 
 export default function FlashcardsTab({ decks: initialDecks, onDecksChange }) {
-  const [decks, setDecks] = useState(initialDecks ?? loadDecks());
+  const [decks, setDecks] = useState(initialDecks ?? []);
   const [search, setSearch] = useState('');
   const [expandedDecks, setExpandedDecks] = useState(new Set(['default']));
   const [studying, setStudying] = useState(null); // deck object
   const [creatingDeck, setCreatingDeck] = useState(false);
   const [newDeckName, setNewDeckName] = useState('');
 
-  function updateDecks(updated) {
+  async function updateDecks(updated) {
     setDecks(updated);
-    onDecksChange?.(updated);
+    await onDecksChange?.();
   }
 
   function toggleDeck(id) {
@@ -24,16 +24,18 @@ export default function FlashcardsTab({ decks: initialDecks, onDecksChange }) {
     });
   }
 
-  function handleCreateDeck() {
+  async function handleCreateDeck() {
     const name = newDeckName.trim();
     if (!name) return;
-    updateDecks(createDeck(name));
+    const updated = await createDeck(name);
+    setDecks(updated);
+    await onDecksChange?.();
     setNewDeckName('');
     setCreatingDeck(false);
   }
 
-  function handleStudyDone(updatedDecks) {
-    updateDecks(updatedDecks);
+  async function handleStudyDone() {
+    await onDecksChange?.();
     setStudying(null);
   }
 

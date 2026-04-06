@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { isDue, scheduleCard } from '../utils/srs';
-import { updateCardInDeck, loadDecks } from '../utils/deckStorage';
+import { updateCardInDeck } from '../utils/supabaseDecks';
 import { speakOne } from '../utils/tts';
 
 export default function StudySession({ deck, onDone, onBack }) {
@@ -17,11 +17,14 @@ export default function StudySession({ deck, onDone, onBack }) {
 
   function handleRating(rating) {
     const updates = scheduleCard(card, rating);
-    const updatedDecks = updateCardInDeck(deck.id, card.id, updates);
+    // Fire-and-forget — UI advances immediately, DB syncs in background
+    updateCardInDeck(deck.id, card.id, updates).catch(e =>
+      console.error('[study] updateCard failed:', e)
+    );
 
     if (current + 1 >= queue.length) {
       setDone(true);
-      onDone(updatedDecks);
+      onDone();
     } else {
       setFlipped(false);
       setCurrent(i => i + 1);

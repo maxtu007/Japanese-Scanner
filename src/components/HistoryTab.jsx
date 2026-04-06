@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   loadHistory,
   createFolder,
@@ -7,7 +7,7 @@ import {
   renameScan,
   moveScan,
   deleteScan,
-} from '../utils/historyStorage';
+} from '../utils/supabaseHistory';
 
 function formatDate(isoStr) {
   const d = new Date(isoStr);
@@ -24,8 +24,17 @@ function getAllScans(history) {
 }
 
 export default function HistoryTab({ onOpenScan }) {
-  const [history, setHistory] = useState(() => loadHistory());
-  const [expandedFolders, setExpandedFolders] = useState(new Set(['default']));
+  const [history, setHistory] = useState({ folders: [] });
+  const [expandedFolders, setExpandedFolders] = useState(new Set());
+
+  useEffect(() => {
+    loadHistory().then(h => {
+      setHistory(h);
+      // Auto-expand the default folder
+      const def = h.folders.find(f => f.isDefault) ?? h.folders[0];
+      if (def) setExpandedFolders(new Set([def.id]));
+    });
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Dialog state machine
@@ -67,10 +76,10 @@ export default function HistoryTab({ onOpenScan }) {
 
   // ── Dialog handlers ──
 
-  function handleCreateFolder() {
+  async function handleCreateFolder() {
     const name = inputValue.trim();
     if (!name) return;
-    refresh(createFolder(name));
+    refresh(await createFolder(name));
     closeDialog();
   }
 
@@ -80,10 +89,10 @@ export default function HistoryTab({ onOpenScan }) {
     setDialog(d => ({ ...d, folderId }));
   }
 
-  function handleRenameFolder() {
+  async function handleRenameFolder() {
     const name = inputValue.trim();
     if (!name || !dialog.folderId) return;
-    refresh(renameFolder(dialog.folderId, name));
+    refresh(await renameFolder(dialog.folderId, name));
     closeDialog();
   }
 
@@ -93,10 +102,10 @@ export default function HistoryTab({ onOpenScan }) {
     setDialog(d => ({ ...d, scanId }));
   }
 
-  function handleRenameScan() {
+  async function handleRenameScan() {
     const name = inputValue.trim();
     if (!name || !dialog.scanId) return;
-    refresh(renameScan(dialog.scanId, name));
+    refresh(await renameScan(dialog.scanId, name));
     closeDialog();
   }
 
@@ -104,8 +113,8 @@ export default function HistoryTab({ onOpenScan }) {
     setDialog(d => ({ ...d, scanId }));
   }
 
-  function handlePickTargetFolder(targetFolderId) {
-    refresh(moveScan(dialog.scanId, targetFolderId));
+  async function handlePickTargetFolder(targetFolderId) {
+    refresh(await moveScan(dialog.scanId, targetFolderId));
     closeDialog();
   }
 
@@ -113,9 +122,9 @@ export default function HistoryTab({ onOpenScan }) {
     setDialog(d => ({ ...d, folderId }));
   }
 
-  function handleDeleteFolder() {
+  async function handleDeleteFolder() {
     if (!dialog.folderId) return;
-    refresh(deleteFolder(dialog.folderId));
+    refresh(await deleteFolder(dialog.folderId));
     closeDialog();
   }
 
@@ -123,9 +132,9 @@ export default function HistoryTab({ onOpenScan }) {
     setDialog(d => ({ ...d, scanId }));
   }
 
-  function handleDeleteScan() {
+  async function handleDeleteScan() {
     if (!dialog.scanId) return;
-    refresh(deleteScan(dialog.scanId));
+    refresh(await deleteScan(dialog.scanId));
     closeDialog();
   }
 
@@ -254,7 +263,7 @@ export default function HistoryTab({ onOpenScan }) {
     // DELETE FOLDER
     if (type === 'delete-folder') {
       if (!folderId) {
-        const deletable = history.folders.filter(f => f.id !== 'default');
+        const deletable = history.folders.filter(f => !f.isDefault);
         return (
           <DialogShell title="Delete Folder" onClose={closeDialog}>
             {deletable.length === 0 ? (
@@ -348,7 +357,7 @@ export default function HistoryTab({ onOpenScan }) {
           <p className="history-empty">No scans yet. Scan a page to get started!</p>
         )}
         {history.folders.map(folder => {
-          if (folder.scans.length === 0 && history.folders.length > 1 && folder.id !== 'default') return null;
+          if (folder.scans.length === 0 && history.folders.length > 1 && !folder.isDefault) return null;
           const expanded = expandedFolders.has(folder.id);
           return (
             <div key={folder.id} className="history-folder">
