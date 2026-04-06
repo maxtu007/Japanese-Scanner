@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { InAppReview } from '@capacitor-community/in-app-review';
+import TextDisplay from './TextDisplay';
 
 // ── Welcome slides ────────────────────────────────────────────────────────────
 const WELCOME_SLIDES = [
@@ -8,78 +9,55 @@ const WELCOME_SLIDES = [
     id: 'w1',
     illustration: (
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="20" y="38" width="80" height="54" rx="10" fill="#eef1fe" />
-        <rect x="34" y="30" width="20" height="10" rx="4" fill="#c7d0fa" />
-        <circle cx="60" cy="65" r="18" fill="#fff" stroke="#4c6ef5" strokeWidth="2.5" />
-        <circle cx="60" cy="65" r="11" fill="#4c6ef5" opacity="0.15" />
-        <circle cx="60" cy="65" r="6" fill="#4c6ef5" />
-        <circle cx="88" cy="46" r="4" fill="#4c6ef5" opacity="0.5" />
+        {/* Book */}
+        <rect x="22" y="30" width="76" height="60" rx="6" fill="#eef1fe" />
+        <rect x="22" y="30" width="4" height="60" fill="#c7d0fa" />
+        {/* Japanese text lines on book */}
+        <rect x="34" y="42" width="50" height="5" rx="2.5" fill="#c7d0fa" />
+        <rect x="34" y="52" width="38" height="5" rx="2.5" fill="#c7d0fa" />
+        <rect x="34" y="62" width="46" height="5" rx="2.5" fill="#c7d0fa" />
+        <rect x="34" y="72" width="30" height="5" rx="2.5" fill="#c7d0fa" />
+        {/* Mystery kanji floating - blurred/blocked */}
+        <rect x="36" y="44" width="10" height="10" rx="2" fill="#4c6ef5" opacity="0.2" />
+        <rect x="58" y="44" width="10" height="10" rx="2" fill="#4c6ef5" opacity="0.2" />
+        <rect x="36" y="60" width="10" height="10" rx="2" fill="#4c6ef5" opacity="0.2" />
+        {/* Fog/blur overlay */}
+        <rect x="60" y="55" width="36" height="30" rx="6" fill="white" opacity="0.7" />
+        {/* Question marks */}
+        <text x="68" y="72" fontSize="14" fill="#9ca3af" fontFamily="serif" textAnchor="middle">?</text>
+        <text x="82" y="72" fontSize="14" fill="#9ca3af" fontFamily="serif" textAnchor="middle">?</text>
       </svg>
     ),
-    headline: 'Scan. Boom. Understand.',
-    body: 'Point at any Japanese text, snap a photo, and get instant furigana and translation. No more tedious work.',
+    headline: 'Japanese is everywhere around you.',
+    body: 'Signs, menus, manga, novels. And right now, most of it is invisible to you.',
   },
   {
     id: 'w2',
     illustration: (
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="18" y="30" width="52" height="8" rx="4" fill="#e5e7eb" />
-        <rect x="18" y="46" width="40" height="8" rx="4" fill="#e5e7eb" />
-        <rect x="18" y="62" width="30" height="8" rx="4" fill="#4c6ef5" />
-        <rect x="54" y="62" width="28" height="8" rx="4" fill="#e5e7eb" />
-        <rect x="30" y="76" width="72" height="34" rx="8" fill="#fff" stroke="#4c6ef5" strokeWidth="1.5" />
-        <rect x="38" y="83" width="32" height="5" rx="2.5" fill="#0f1b4d" opacity="0.8" />
-        <rect x="38" y="93" width="50" height="4" rx="2" fill="#6b7280" opacity="0.5" />
-        <rect x="38" y="101" width="40" height="4" rx="2" fill="#6b7280" opacity="0.3" />
-        <circle cx="33" cy="66" r="5" fill="#4c6ef5" opacity="0.2" />
-        <circle cx="33" cy="66" r="2.5" fill="#4c6ef5" />
+        {/* Phone */}
+        <rect x="35" y="20" width="50" height="80" rx="10" fill="#eef1fe" />
+        <rect x="35" y="20" width="50" height="80" rx="10" stroke="#4c6ef5" strokeWidth="1.5" fill="none" />
+        {/* Screen content - Japanese text with furigana */}
+        <rect x="43" y="35" width="34" height="4" rx="2" fill="#c7d0fa" />
+        <rect x="43" y="30" width="14" height="3" rx="1.5" fill="#4c6ef5" opacity="0.4" />
+        <rect x="43" y="48" width="26" height="4" rx="2" fill="#c7d0fa" />
+        <rect x="43" y="43" width="10" height="3" rx="1.5" fill="#4c6ef5" opacity="0.4" />
+        {/* Tap ripple on a word */}
+        <circle cx="56" cy="64" r="10" fill="#4c6ef5" opacity="0.1" />
+        <circle cx="56" cy="64" r="6" fill="#4c6ef5" opacity="0.15" />
+        <rect x="48" y="61" width="16" height="5" rx="2.5" fill="#4c6ef5" />
+        {/* Popup */}
+        <rect x="30" y="76" width="60" height="18" rx="6" fill="white" stroke="#4c6ef5" strokeWidth="1.2" />
+        <rect x="36" y="80" width="20" height="3" rx="1.5" fill="#0f1b4d" opacity="0.8" />
+        <rect x="36" y="86" width="36" height="3" rx="1.5" fill="#6b7280" opacity="0.5" />
+        {/* Timer badge */}
+        <circle cx="89" cy="27" r="10" fill="#4c6ef5" />
+        <text x="89" y="31" fontSize="8" fill="white" textAnchor="middle" fontWeight="bold">2m</text>
       </svg>
     ),
-    headline: 'Every word, on tap.',
-    body: 'Tap any word to instantly see its meaning, reading, and dictionary form. No more leaving the app.',
-  },
-  {
-    id: 'w3',
-    illustration: (
-      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Page with text lines */}
-        <rect x="22" y="20" width="76" height="80" rx="8" fill="#eef1fe" />
-        {/* Text lines */}
-        <rect x="32" y="34" width="44" height="6" rx="3" fill="#c7d0fa" />
-        <rect x="32" y="46" width="56" height="6" rx="3" fill="#c7d0fa" />
-        {/* Grammar pattern bracket — underline highlight */}
-        <rect x="32" y="58" width="36" height="6" rx="3" fill="#4c6ef5" opacity="0.25" />
-        <line x1="32" y1="66" x2="68" y2="66" stroke="#4c6ef5" strokeWidth="1.5" />
-        <rect x="32" y="72" width="48" height="6" rx="3" fill="#c7d0fa" />
-        {/* Explanation tag */}
-        <rect x="54" y="54" width="38" height="18" rx="6" fill="#4c6ef5" />
-        <rect x="58" y="59" width="22" height="3" rx="1.5" fill="#fff" opacity="0.9" />
-        <rect x="58" y="64" width="16" height="3" rx="1.5" fill="#fff" opacity="0.6" />
-        {/* Connector dot */}
-        <circle cx="50" cy="61" r="2.5" fill="#4c6ef5" />
-        <line x1="52" y1="61" x2="54" y2="61" stroke="#4c6ef5" strokeWidth="1.5" />
-      </svg>
-    ),
-    headline: 'Get real clarity.',
-    body: 'Tap any word or grammar pattern for a full explanation — meaning, context, and usage — so you actually understand what you read.',
-  },
-  {
-    id: 'w4',
-    illustration: (
-      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="28" y="48" width="64" height="44" rx="8" fill="#c7d0fa" />
-        <rect x="22" y="42" width="64" height="44" rx="8" fill="#eef1fe" />
-        <rect x="16" y="36" width="64" height="44" rx="8" fill="#fff" stroke="#4c6ef5" strokeWidth="1.5" />
-        <text x="48" y="62" textAnchor="middle" fontSize="20" fontFamily="serif" fill="#4c6ef5">食</text>
-        <rect x="26" y="68" width="44" height="4" rx="2" fill="#6b7280" opacity="0.3" />
-        <rect x="30" y="74" width="36" height="4" rx="2" fill="#6b7280" opacity="0.2" />
-        <circle cx="76" cy="34" r="11" fill="#4c6ef5" />
-        <line x1="76" y1="28" x2="76" y2="40" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="70" y1="34" x2="82" y2="34" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-    ),
-    headline: 'Turn real life into lessons.',
-    body: 'Save words from anything you scan. Review with spaced repetition and build vocabulary from content that matters.',
+    headline: 'That changes in 2 minutes.',
+    body: "Tell us a little about yourself — then we'll show you something that fixes all of it.",
   },
 ];
 
@@ -125,77 +103,260 @@ const PlatformIcon = ({ id }) => {
   return null;
 };
 
-// ── Immersion screens ─────────────────────────────────────────────────────────
-const SCREENS = [
+// ── Demo data — opening of 雪国 (Snow Country) by Kawabata (public domain) ──────
+const DEMO_MEANINGS = {
+  '国境':  { reading: 'こっきょう', meaning: 'border; boundary between regions' },
+  '長い':  { reading: 'ながい',     meaning: 'long; lengthy' },
+  'トンネル': { reading: 'とんねる', meaning: 'tunnel' },
+  '抜ける': { reading: 'ぬける',    meaning: 'to pass through; to exit the other side' },
+  '雪国':  { reading: 'ゆきぐに',   meaning: 'snow country; snowy land' },
+  'ある':  { reading: 'ある',       meaning: 'to be; to exist (past form: あった)' },
+  '夜':    { reading: 'よる',       meaning: 'night; nighttime' },
+  '底':    { reading: 'そこ',       meaning: 'bottom; the very depths' },
+  '白い':  { reading: 'しろい',     meaning: 'white; pure white' },
+  'なる':  { reading: 'なる',       meaning: 'to become; to turn into' },
+  '信号所': { reading: 'しんごうじょ', meaning: 'signal halt; railway signal stop' },
+  '汽車':  { reading: 'きしゃ',     meaning: 'steam train; railway train (old-style)' },
+  '止まる': { reading: 'とまる',    meaning: 'to stop; to come to a halt' },
+};
+
+const DEMO_BLOCKS = [
   {
-    type: 'question',
-    id: 'source',
-    label: 'WELCOME',
-    question: 'Where did you hear about us?',
-    subtext: "We're so glad you're here — let us know how you found UnBlur.",
-    multiSelect: false,
-    options: [
-      { id: 'tiktok',   label: 'TikTok',         sub: 'Saw a video',           platform: true },
-      { id: 'instagram',label: 'Instagram',       sub: 'Saw a post or reel',    platform: true },
-      { id: 'youtube',  label: 'YouTube',         sub: 'Watched a video',       platform: true },
-      { id: 'x',        label: 'X / Twitter',     sub: 'Saw a post',            platform: true },
-      { id: 'friend',   label: 'A friend told me',sub: 'Word of mouth',         platform: true },
-      { id: 'other',    label: 'Somewhere else',  sub: 'Google, App Store, etc',platform: true },
-    ],
-  },
-  {
-    type: 'question',
-    id: 'frequency',
-    label: 'YOUR HABITS',
-    question: 'How often do you encounter Japanese?',
-    subtext: "Whether it's every day or once in a while — UnBlur is ready when you are.",
-    multiSelect: false,
-    options: [
-      { id: 'daily',    label: 'Every day',           sub: "It's part of my daily life" },
-      { id: 'weekly',   label: 'A few times a week',  sub: 'Regularly but not daily' },
-      { id: 'sometimes',label: 'Occasionally',        sub: 'When I watch, read, or travel' },
-      { id: 'soon',     label: "I'm going to Japan",  sub: 'Preparing for a trip' },
-    ],
-  },
-  {
-    type: 'question',
-    id: 'problems',
-    label: 'YOUR STRUGGLES',
-    question: 'What holds you back when reading Japanese?',
-    subtext: "Select everything that feels familiar. No judgment — we've got you covered.",
-    multiSelect: true,
-    options: [
-      { id: 'kanji',   label: "Kanji I can't read",            sub: 'Unknown characters block my reading' },
-      { id: 'flow',    label: 'Losing my reading flow',         sub: 'Stopping to look things up breaks focus' },
-      { id: 'vocab',   label: "Forgetting words I've learned",  sub: "Studied it, then it's gone" },
-      { id: 'grammar', label: "Grammar I don't understand",     sub: "Patterns that don't make sense" },
-    ],
-  },
-  {
-    type: 'rating',
-    id: 'rate',
-  },
-  {
-    type: 'marketing',
-    id: 'stat',
-  },
-  {
-    type: 'question',
-    id: 'goal',
-    label: 'YOUR GOAL',
-    question: "What's your main goal with Japanese?",
-    subtext: "We'll make sure UnBlur is set up to get you there.",
-    multiSelect: false,
-    options: [
-      { id: 'read',    label: 'Read without stopping',      sub: 'Flow through any text smoothly' },
-      { id: 'vocab',   label: 'Build vocabulary faster',    sub: 'Learn words from real content' },
-      { id: 'grammar', label: 'Understand grammar better',  sub: 'See patterns explained in context' },
-      { id: 'basics',  label: 'Just get the basics',        sub: 'Communicate what I need' },
+    sentences: [
+      {
+        tokens: [
+          { surface_form: '国境', reading: 'コッキョウ', pos: '名詞', basic_form: '国境', lookupTarget: '国境' },
+          { surface_form: 'の',   reading: 'ノ',         pos: '助詞', basic_form: 'の' },
+          { surface_form: '長い', reading: 'ナガイ',     pos: '形容詞', basic_form: '長い', lookupTarget: '長い' },
+          { surface_form: 'トンネル', reading: 'トンネル', pos: '名詞', basic_form: 'トンネル', lookupTarget: 'トンネル' },
+          { surface_form: 'を',   reading: 'ヲ',         pos: '助詞', basic_form: 'を' },
+          { surface_form: '抜ける', reading: 'ヌケル',   pos: '動詞', basic_form: '抜ける', lookupTarget: '抜ける' },
+          { surface_form: 'と',   reading: 'ト',         pos: '助詞', basic_form: 'と' },
+          { surface_form: '雪国', reading: 'ユキグニ',   pos: '名詞', basic_form: '雪国', lookupTarget: '雪国' },
+          { surface_form: 'で',   reading: 'デ',         pos: '助詞', basic_form: 'で' },
+          { surface_form: 'あった', reading: 'アッタ',   pos: '動詞', basic_form: 'ある', lookupTarget: 'ある' },
+          { surface_form: '。',   reading: '。',         pos: '記号', basic_form: '。' },
+        ],
+        translation: 'The train came out of the long tunnel into the snow country.',
+      },
+      {
+        tokens: [
+          { surface_form: '夜',   reading: 'ヨル',       pos: '名詞', basic_form: '夜', lookupTarget: '夜' },
+          { surface_form: 'の',   reading: 'ノ',         pos: '助詞', basic_form: 'の' },
+          { surface_form: '底',   reading: 'ソコ',       pos: '名詞', basic_form: '底', lookupTarget: '底' },
+          { surface_form: 'が',   reading: 'ガ',         pos: '助詞', basic_form: 'が' },
+          { surface_form: '白く', reading: 'シロク',     pos: '形容詞', basic_form: '白い', lookupTarget: '白い' },
+          { surface_form: 'なった', reading: 'ナッタ',   pos: '動詞', basic_form: 'なる', lookupTarget: 'なる' },
+          { surface_form: '。',   reading: '。',         pos: '記号', basic_form: '。' },
+        ],
+        translation: 'The bottom of the night had turned white.',
+      },
+      {
+        tokens: [
+          { surface_form: '信号所', reading: 'シンゴウジョ', pos: '名詞', basic_form: '信号所', lookupTarget: '信号所' },
+          { surface_form: 'に',   reading: 'ニ',         pos: '助詞', basic_form: 'に' },
+          { surface_form: '汽車', reading: 'キシャ',     pos: '名詞', basic_form: '汽車', lookupTarget: '汽車' },
+          { surface_form: 'が',   reading: 'ガ',         pos: '助詞', basic_form: 'が' },
+          { surface_form: '止まった', reading: 'トマッタ', pos: '動詞', basic_form: '止まる', lookupTarget: '止まる' },
+          { surface_form: '。',   reading: '。',         pos: '記号', basic_form: '。' },
+        ],
+        translation: 'The train stopped at a signal halt.',
+      },
     ],
   },
 ];
 
-// ── Star component ────────────────────────────────────────────────────────────
+// ── Testimonials by context ───────────────────────────────────────────────────
+const TESTIMONIALS = {
+  manga:    [
+    { initial: 'A', color: '#4c6ef5', name: 'Alex M.',  location: 'London',    quote: "Finished my first manga volume in Japanese. UnBlur made it actually possible — I stopped dreading every page." },
+    { initial: 'Y', color: '#0ea5e9', name: 'Yuki R.',  location: 'Sydney',    quote: "I used to skip kanji I didn't know. Now I just tap them. My vocabulary doubled in a month from reading manga." },
+  ],
+  novels:   [
+    { initial: 'C', color: '#7c3aed', name: 'Clara H.', location: 'Berlin',    quote: "Reading 雪国 in Japanese felt impossible before this. I'm on my third novel now." },
+    { initial: 'J', color: '#059669', name: 'James T.', location: 'Toronto',   quote: "I'd been putting off Japanese novels for years. Finished my first one last month." },
+  ],
+  everyday: [
+    { initial: 'S', color: '#dc2626', name: 'Sarah K.', location: 'Tokyo',     quote: "Two weeks in Japan — read every sign, every menu, every label. Never felt lost once." },
+    { initial: 'M', color: '#4c6ef5', name: 'Marcus T.', location: 'New York', quote: "Went from struggling through menus to ordering like a local. Worth every penny." },
+  ],
+  social:   [
+    { initial: 'P', color: '#0ea5e9', name: 'Priya S.', location: 'Singapore', quote: "I actually follow Japanese Twitter now. Used to be completely locked out of it." },
+    { initial: 'L', color: '#7c3aed', name: 'Liam B.',  location: 'Melbourne', quote: "YouTube comments, Discord servers — I can participate now instead of just lurking." },
+  ],
+};
+const DEFAULT_TESTIMONIALS = [
+  { initial: 'S', color: '#4c6ef5', name: 'Sarah K.', location: 'Tokyo',    quote: "Finally I can read without stopping every 5 seconds. UnBlur completely changed how I study." },
+  { initial: 'M', color: '#0ea5e9', name: 'Marcus T.', location: 'New York', quote: "Went from struggling through menus to reading signs confidently. Absolutely worth it." },
+];
+
+// ── Mirror text builders ──────────────────────────────────────────────────────
+function getMirror1(answers) {
+  const ctxMap = { manga: 'manga', novels: 'novels', everyday: 'everyday Japanese text', social: 'Japanese social media' };
+  const frMap  = {
+    switch: 'you have to stop and switch to Google Translate',
+    dict:   'you stop to open a dictionary app and lose your place',
+    skip:   "you skip the word and hope context fills the gap",
+    stop:   'the frustration makes you want to stop reading entirely',
+  };
+  const ctxArr = answers.context || [];
+  const ctxText = ctxArr.length > 0
+    ? ctxArr.slice(0, 2).map(c => ctxMap[c] || c).join(' and ')
+    : 'Japanese content';
+  const frText = frMap[answers.friction] || 'you get stuck';
+  return { ctxText, frText };
+}
+
+function getMirror2(answers) {
+  const freqMap = {
+    constant:   'losing your reading flow every few minutes',
+    frequent:   'being interrupted several times every session',
+    occasional: 'having your momentum killed every time it happens',
+    stopped:    'having mostly given up on reading in Japanese',
+  };
+  const commitMap = {
+    serious:    "you're done being stuck",
+    pretty:     "you have the motivation — you just need the right tool",
+    exploring:  "you're ready to try something new",
+  };
+  return {
+    freq:   freqMap[answers.frequency]  || 'struggling with Japanese',
+    commit: commitMap[answers.commitment] || "you're ready to change that",
+  };
+}
+
+function getVisionText(answers) {
+  const ctxMap = { manga: 'a manga chapter', novels: 'a Japanese novel', everyday: 'a sign or menu', social: 'a Japanese tweet' };
+  const ctxArr = answers.context || [];
+  return ctxArr[0] ? ctxMap[ctxArr[0]] : 'any Japanese text';
+}
+
+function getPlanItems(answers) {
+  const ctxLabels  = { manga: 'Manga & Visual Novels', novels: 'Literary Fiction & Novels', everyday: 'Everyday Text & Signs', social: 'Social Media & Online Content' };
+  const frLabels   = { switch: 'App-switching breaks flow', dict: 'Dictionary lookups break flow', skip: 'Skipping unknown kanji', stop: 'Frustration-driven reading blocks' };
+  const freqLabels = { constant: 'Multiple times per minute', frequent: 'Several times per session', occasional: 'Occasional but flow-breaking', stopped: 'Severe — nearly quit reading' };
+  const ctxArr = answers.context || [];
+  return [
+    { label: 'Reading context',  value: ctxArr.map(c => ctxLabels[c] || c).join(', ') || 'General Japanese' },
+    { label: 'Primary friction', value: frLabels[answers.friction]  || 'Unknown words' },
+    { label: 'Frequency',        value: freqLabels[answers.frequency] || 'Regular' },
+    { label: 'Goal',             value: 'Read without interruption' },
+    { label: 'Method',           value: 'Real-content immersion + instant lookup' },
+  ];
+}
+
+// ── Screen definitions ────────────────────────────────────────────────────────
+const SCREENS = [
+  // ─ ACT 1: DIAGNOSIS ──────────────────────────────────────────────────────
+  {
+    type: 'question', id: 'source', label: 'WELCOME',
+    question: 'Where did you hear about us?',
+    subtext: "We're so glad you're here — let us know how you found UnBlur.",
+    multiSelect: false,
+    options: [
+      { id: 'tiktok',    label: 'TikTok',          sub: 'Saw a video',            platform: true },
+      { id: 'instagram', label: 'Instagram',        sub: 'Saw a post or reel',     platform: true },
+      { id: 'youtube',   label: 'YouTube',          sub: 'Watched a video',        platform: true },
+      { id: 'x',         label: 'X / Twitter',      sub: 'Saw a post',             platform: true },
+      { id: 'friend',    label: 'A friend told me', sub: 'Word of mouth',          platform: true },
+      { id: 'other',     label: 'Somewhere else',   sub: 'Google, App Store, etc', platform: true },
+    ],
+  },
+  {
+    type: 'question', id: 'identity', label: 'WHO YOU ARE',
+    question: 'What best describes you right now?',
+    subtext: "There's no wrong answer — we'll set up UnBlur for exactly who you are.",
+    multiSelect: false,
+    options: [
+      { id: 'enthusiast', label: 'Japanese enthusiast',        sub: 'Anime, manga, games, music' },
+      { id: 'student',    label: 'Actively studying Japanese', sub: 'Working through the language seriously' },
+      { id: 'traveler',   label: 'Going to Japan',             sub: 'Preparing for a trip or move' },
+      { id: 'immersed',   label: 'Japanese is in my daily life', sub: 'Work, school, or living in Japan' },
+    ],
+  },
+  {
+    type: 'question', id: 'context', label: 'YOUR WORLD',
+    question: 'What do you most want to read without struggling?',
+    subtext: 'Select all that apply.',
+    multiSelect: true,
+    options: [
+      { id: 'manga',    label: 'Manga and visual novels',      sub: 'Panels, speech bubbles, text boxes' },
+      { id: 'novels',   label: 'Novels and books',             sub: 'Literary fiction, light novels' },
+      { id: 'everyday', label: 'Menus, signs, packaging',     sub: 'Real-world everyday text' },
+      { id: 'social',   label: 'Social media and online',     sub: 'Tweets, YouTube, news articles' },
+    ],
+  },
+  {
+    type: 'question', id: 'friction', label: 'THE REALITY',
+    question: "When you hit a kanji you don't know — what do you actually do?",
+    subtext: "Be honest. We've all been there.",
+    multiSelect: false,
+    options: [
+      { id: 'switch', label: 'Switch to Google Translate',    sub: "Leave what I'm reading, then lose my place" },
+      { id: 'dict',   label: 'Open a dictionary app',         sub: 'Breaks my flow every single time' },
+      { id: 'skip',   label: 'Skip it and hope context helps', sub: 'Miss the meaning, carry on anyway' },
+      { id: 'stop',   label: 'Get frustrated and stop reading', sub: 'It kills the mood entirely' },
+    ],
+  },
+  { type: 'mirror', id: 'mirror1' },
+  {
+    type: 'question', id: 'frequency', label: 'THE REAL COST',
+    question: 'How often does this slow you down in a single reading session?',
+    subtext: 'Think about the last time you tried to read something in Japanese.',
+    multiSelect: false,
+    options: [
+      { id: 'constant',   label: 'Constantly — every few minutes',  sub: 'Reading feels like an obstacle course' },
+      { id: 'frequent',   label: 'Several times per session',        sub: 'Enough to seriously break focus' },
+      { id: 'occasional', label: 'Occasionally',                     sub: "But when it happens, it kills the momentum" },
+      { id: 'stopped',    label: "I've mostly given up trying",      sub: "The frustration isn't worth it anymore" },
+    ],
+  },
+  {
+    type: 'question', id: 'cost', label: "WHAT IT'S COSTING YOU",
+    question: "Be honest — what has this cost you?",
+    subtext: 'Select the one that hits closest to home.',
+    multiSelect: false,
+    options: [
+      { id: 'progress',   label: "I study hard but can't read real content", sub: 'All that effort, still blocked' },
+      { id: 'enjoyment',  label: "I can't enjoy the things I love",          sub: 'Anime, manga, novels — all harder than they should be' },
+      { id: 'stuck',      label: "I feel stuck at the same level",           sub: "No matter what I do, I don't seem to improve" },
+      { id: 'quit',       label: "I've almost given up on my goals",         sub: 'The gap feels too big to close' },
+    ],
+  },
+  {
+    type: 'question', id: 'commitment', label: 'YOUR INTENTION',
+    question: 'How seriously do you want to fix this?',
+    subtext: "We're about to show you exactly how.",
+    multiSelect: false,
+    options: [
+      { id: 'serious',   label: "Very seriously — I'm done being stuck",      sub: 'Ready to make a real change' },
+      { id: 'pretty',    label: 'Pretty seriously — I just need the right tool', sub: 'The effort is there, just not the solution yet' },
+      { id: 'exploring', label: 'Just exploring for now',                     sub: 'Curious to see what this can do' },
+    ],
+  },
+  { type: 'mirror', id: 'mirror2' },
+  // ─ ACT 2: THE DEMO ───────────────────────────────────────────────────────
+  { type: 'demo-intro',    id: 'demo-intro' },
+  { type: 'demo-live',     id: 'demo-live' },
+  { type: 'demo-reaction', id: 'demo-reaction' },
+  // ─ ACT 3: THE CLOSE ──────────────────────────────────────────────────────
+  { type: 'social',  id: 'social' },
+  { type: 'vision',  id: 'vision' },
+  { type: 'plan',    id: 'plan' },
+  {
+    type: 'question', id: 'final-commitment', label: 'ONE LAST THING',
+    question: 'How committed are you to making this happen?',
+    subtext: "Your plan is ready — this is the last step.",
+    multiSelect: false,
+    options: [
+      { id: 'allin',     label: "All in — let's do this",              sub: "I'm starting today" },
+      { id: 'ready',     label: "I'm ready to give this a real shot",  sub: 'Committed and motivated' },
+      { id: 'maybe',     label: 'I want to think about it first',      sub: 'Just exploring' },
+    ],
+  },
+];
+
+// ── Star icon ─────────────────────────────────────────────────────────────────
 function StarIcon({ filled }) {
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="star-icon">
@@ -203,32 +364,60 @@ function StarIcon({ filled }) {
         d="M20 4l4.5 9.1 10 1.5-7.3 7.1 1.7 10-8.9-4.7-8.9 4.7 1.7-10L5.5 14.6l10-1.5z"
         fill={filled ? '#f59e0b' : 'none'}
         stroke={filled ? '#f59e0b' : '#d1d5db'}
-        strokeWidth="2"
-        strokeLinejoin="round"
+        strokeWidth="2" strokeLinejoin="round"
       />
     </svg>
   );
 }
 
+// ── Demo word popup (no API calls — hardcoded meanings) ───────────────────────
+function DemoWordPopup({ token, onClose }) {
+  if (!token) return null;
+  const key  = token.basic_form && token.basic_form !== '*' ? token.basic_form : token.surface_form;
+  const data = DEMO_MEANINGS[key] || DEMO_MEANINGS[token.surface_form];
+  if (!data) return null;
+
+  return (
+    <div className="demo-word-popup-backdrop" onClick={onClose}>
+      <div className="demo-word-popup" onClick={e => e.stopPropagation()}>
+        <button className="demo-word-popup-close" onClick={onClose}>✕</button>
+        <div className="demo-word-popup-word">{token.surface_form}</div>
+        <div className="demo-word-popup-reading">{data.reading}</div>
+        <div className="demo-word-popup-meaning">{data.meaning}</div>
+        <div className="demo-word-popup-hint">
+          This is what UnBlur shows you — instantly, on every tap.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function OnboardingScreen({ onDone }) {
-  const [phase, setPhase]         = useState('welcome');
+  const [phase, setPhase]           = useState('welcome');
   const [welcomeIdx, setWelcomeIdx] = useState(0);
-  const [screenIdx, setScreenIdx] = useState(0);
-  const [answers, setAnswers]     = useState({});
-  const [rating, setRating]       = useState(0);
+  const [screenIdx, setScreenIdx]   = useState(0);
+  const [answers, setAnswers]       = useState({});
+  // Demo state
+  const [demoPhase, setDemoPhase]   = useState('book');  // 'book' | 'scanning' | 'result'
+  const [demoToken, setDemoToken]   = useState(null);
+  const [demoTapped, setDemoTapped] = useState(false);
+  // Demo reaction
+  const [reaction, setReaction]     = useState(null);
+  const [rating, setRating]         = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  // Plan generation
+  const [planStep, setPlanStep]     = useState(0);
   const touchStartX = useRef(null);
 
   const totalScreens = SCREENS.length;
-  const progress = ((screenIdx + 1) / totalScreens) * 100;
+  const progress     = ((screenIdx + 1) / totalScreens) * 100;
 
   // ── Welcome nav ─────────────────────────────────────────────────────────────
   function welcomeNext() {
     if (welcomeIdx < WELCOME_SLIDES.length - 1) setWelcomeIdx(i => i + 1);
     else setPhase('immersion');
   }
-
   function handleTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
   function handleTouchEnd(e) {
     if (touchStartX.current === null) return;
@@ -256,10 +445,37 @@ export default function OnboardingScreen({ onDone }) {
   }
 
   function canContinue(screen) {
-    if (screen.type === 'marketing' || screen.type === 'rating') return true;
+    if (!screen || screen.type !== 'question') return true;
     if (screen.multiSelect) return (answers[screen.id] || []).length > 0;
     return !!answers[screen.id];
   }
+
+  // ── Demo handlers ────────────────────────────────────────────────────────────
+  function handleScanDemo() {
+    setDemoPhase('scanning');
+    setTimeout(() => setDemoPhase('result'), 1800);
+  }
+
+  function handleDemoWordClick(token) {
+    const key  = token.basic_form && token.basic_form !== '*' ? token.basic_form : token.surface_form;
+    const data = DEMO_MEANINGS[key] || DEMO_MEANINGS[token.surface_form];
+    if (!data) return;
+    setDemoToken(token);
+    setDemoTapped(true);
+  }
+
+  // ── Plan animation ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const screen = SCREENS[screenIdx];
+    if (!screen || screen.type !== 'plan') return;
+    setPlanStep(0);
+    const items = getPlanItems(answers);
+    const timers = items.map((_, i) =>
+      setTimeout(() => setPlanStep(s => Math.max(s, i + 1)), 600 + i * 700)
+    );
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenIdx]);
 
   // ── Render: welcome ──────────────────────────────────────────────────────────
   if (phase === 'welcome') {
@@ -280,16 +496,14 @@ export default function OnboardingScreen({ onDone }) {
             ))}
           </div>
         </div>
-
         <div className="onboarding-dots">
           {WELCOME_SLIDES.map((_, i) => (
             <button key={i} className={`onboarding-dot${i === welcomeIdx ? ' active' : ''}`} onClick={() => setWelcomeIdx(i)} />
           ))}
         </div>
-
         <div className="onboarding-actions">
           <button className="onboarding-next-btn" onClick={welcomeNext}>
-            {welcomeIdx < WELCOME_SLIDES.length - 1 ? 'Next' : 'Continue'}
+            {welcomeIdx < WELCOME_SLIDES.length - 1 ? 'Next' : "Let's go →"}
           </button>
         </div>
       </div>
@@ -298,37 +512,289 @@ export default function OnboardingScreen({ onDone }) {
 
   // ── Render: immersion ────────────────────────────────────────────────────────
   const screen = SCREENS[screenIdx];
-  const isLast = screenIdx === SCREENS.length - 1;
 
-  // Marketing screen
-  if (screen.type === 'marketing') {
+  // ── Mirror screen ────────────────────────────────────────────────────────────
+  if (screen.type === 'mirror') {
+    if (screen.id === 'mirror1') {
+      const { ctxText, frText } = getMirror1(answers);
+      return (
+        <div className="onboarding">
+          <div className="immersion-progress-bar-track">
+            <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="immersion-content mirror-screen">
+            <span className="onboarding-phase-label">WE HEAR YOU</span>
+            <div className="mirror-quote-block">
+              <p className="mirror-quote-text">
+                You want to read <strong>{ctxText}</strong> — but every unknown kanji means <strong>{frText}</strong>.
+              </p>
+              <p className="mirror-quote-text" style={{ marginTop: 16 }}>
+                That's not a <em>you</em> problem. That's a tooling problem.
+              </p>
+            </div>
+            <div className="mirror-accent-line">That stops today.</div>
+          </div>
+          <div className="onboarding-actions">
+            <button className="onboarding-next-btn" onClick={next}>That's exactly it →</button>
+          </div>
+        </div>
+      );
+    }
+
+    if (screen.id === 'mirror2') {
+      const { freq, commit } = getMirror2(answers);
+      return (
+        <div className="onboarding">
+          <div className="immersion-progress-bar-track">
+            <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="immersion-content mirror-screen">
+            <span className="onboarding-phase-label">YOU'RE IN THE RIGHT PLACE</span>
+            <div className="mirror-quote-block">
+              <p className="mirror-quote-text">
+                You've been <strong>{freq}</strong> — and <strong>{commit}</strong>.
+              </p>
+              <p className="mirror-quote-text" style={{ marginTop: 16 }}>
+                Here's what we built for you.
+              </p>
+              <p className="mirror-quote-text mirror-quote-emphasis">
+                Let's try it right now — before anything else.
+              </p>
+            </div>
+          </div>
+          <div className="onboarding-actions">
+            <button className="onboarding-next-btn" onClick={next}>Show me →</button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // ── Demo intro ────────────────────────────────────────────────────────────────
+  if (screen.type === 'demo-intro') {
     return (
       <div className="onboarding">
         <div className="immersion-progress-bar-track">
           <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
         </div>
-        <div className="immersion-content immersion-marketing">
-          <span className="onboarding-phase-label">DID YOU KNOW</span>
-          <div className="marketing-stat">2×</div>
-          <h2 className="marketing-headline">Faster vocabulary growth</h2>
-          <p className="marketing-body">
-            UnBlur users build vocabulary <strong>twice as fast</strong> as traditional dictionary lookups — because you learn words in real context, from content you actually care about.
+        <div className="immersion-content demo-intro-content">
+          <span className="onboarding-phase-label">TRY IT NOW</span>
+          <h2 className="onboarding-headline immersion-headline">No tutorial. No walkthrough.</h2>
+          <p className="onboarding-body immersion-subtext">
+            Below is the opening of <em>Snow Country</em> by Kawabata Yasunari — one of Japan's greatest novels. Scan it and see what UnBlur does.
           </p>
-          <div className="marketing-compare">
-            <div className="marketing-compare-item bad">
-              <span className="marketing-compare-label">Dictionary lookups</span>
-              <div className="marketing-compare-bar">
-                <div className="marketing-compare-fill" style={{ width: '40%', background: '#e5e7eb' }} />
+          <div className="demo-book-preview">
+            <div className="demo-book-page">
+              <div className="demo-book-meta">川端康成 — 雪国</div>
+              <div className="demo-book-text">
+                国境の長いトンネルを抜けると雪国であった。夜の底が白くなった。信号所に汽車が止まった。
               </div>
-              <span className="marketing-compare-pct muted">Slow. Breaks focus.</span>
             </div>
-            <div className="marketing-compare-item good">
-              <span className="marketing-compare-label">UnBlur</span>
-              <div className="marketing-compare-bar">
-                <div className="marketing-compare-fill" style={{ width: '90%', background: '#4c6ef5' }} />
+          </div>
+        </div>
+        <div className="onboarding-actions">
+          <button className="onboarding-next-btn" onClick={next}>Scan this page →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Demo live ─────────────────────────────────────────────────────────────────
+  if (screen.type === 'demo-live') {
+    return (
+      <div className="onboarding">
+        <div className="immersion-progress-bar-track">
+          <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
+        </div>
+
+        {demoPhase === 'book' && (
+          <>
+            <div className="immersion-content demo-live-content">
+              <span className="onboarding-phase-label">YOUR SCAN</span>
+              <div className="demo-book-preview demo-book-preview-live">
+                <div className="demo-book-page">
+                  <div className="demo-book-meta">川端康成 — 雪国</div>
+                  <div className="demo-book-text">
+                    国境の長いトンネルを抜けると雪国であった。夜の底が白くなった。信号所に汽車が止まった。
+                  </div>
+                </div>
               </div>
-              <span className="marketing-compare-pct accent">In context. Sticks.</span>
             </div>
+            <div className="onboarding-actions">
+              <button className="onboarding-next-btn" onClick={handleScanDemo}>
+                Scan →
+              </button>
+            </div>
+          </>
+        )}
+
+        {demoPhase === 'scanning' && (
+          <div className="demo-scanning-screen">
+            <div className="demo-scanning-book">
+              <div className="demo-book-page demo-book-page-scanning">
+                <div className="demo-book-meta">川端康成 — 雪国</div>
+                <div className="demo-book-text">
+                  国境の長いトンネルを抜けると雪国であった。夜の底が白くなった。信号所に汽車が止まった。
+                </div>
+                <div className="demo-scan-line" />
+              </div>
+            </div>
+            <p className="demo-scanning-label">Reading…</p>
+          </div>
+        )}
+
+        {demoPhase === 'result' && (
+          <>
+            <div className="immersion-content demo-result-content">
+              <span className="onboarding-phase-label">RESULT</span>
+              {!demoTapped && (
+                <p className="demo-tap-hint">Tap any word below ↓</p>
+              )}
+              <div className="demo-result-display">
+                <TextDisplay
+                  tokenBlocks={DEMO_BLOCKS}
+                  onWordClick={handleDemoWordClick}
+                  showFurigana={true}
+                  showTranslations={true}
+                />
+              </div>
+              <p className="demo-source-credit">— 雪国, 川端康成 (1935, public domain)</p>
+            </div>
+            <div className="onboarding-actions">
+              <button className="onboarding-next-btn" onClick={next}>
+                {demoTapped ? 'Amazing. Continue →' : 'Continue →'}
+              </button>
+            </div>
+            <DemoWordPopup token={demoToken} onClose={() => setDemoToken(null)} />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Demo reaction ─────────────────────────────────────────────────────────────
+  if (screen.type === 'demo-reaction') {
+    const displayRating = hoverRating || rating;
+    return (
+      <div className="onboarding">
+        <div className="immersion-progress-bar-track">
+          <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="immersion-content">
+          <span className="onboarding-phase-label">FIRST IMPRESSION</span>
+          <h2 className="onboarding-headline immersion-headline">How was that?</h2>
+
+          <div className="reaction-options">
+            {[
+              { id: 'amazing',    label: '✨ That was incredible' },
+              { id: 'useful',     label: '👀 More useful than I expected' },
+              { id: 'surprised',  label: '😮 I didn\'t think it\'d work this well' },
+              { id: 'moretoexplore', label: '🤔 I want to explore more' },
+            ].map(r => (
+              <button
+                key={r.id}
+                className={`reaction-option${reaction === r.id ? ' selected' : ''}`}
+                onClick={() => setReaction(r.id)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          {reaction && (
+            <div className="rating-ask" style={{ marginTop: 24 }}>
+              <h3 className="rating-ask-heading">If you're enjoying it, leave us a rating</h3>
+              <div className="rating-stars" onMouseLeave={() => setHoverRating(0)}>
+                {[1,2,3,4,5].map(n => (
+                  <button
+                    key={n}
+                    className="rating-star-btn"
+                    onClick={() => {
+                      setRating(n);
+                      if (n >= 4 && Capacitor.isNativePlatform()) {
+                        InAppReview.requestReview();
+                      }
+                    }}
+                    onMouseEnter={() => setHoverRating(n)}
+                    aria-label={`${n} star`}
+                  >
+                    <StarIcon filled={n <= displayRating} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="onboarding-actions">
+          <button
+            className={`onboarding-next-btn${!reaction ? ' disabled' : ''}`}
+            onClick={reaction ? next : undefined}
+            disabled={!reaction}
+          >
+            Continue →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Social proof ──────────────────────────────────────────────────────────────
+  if (screen.type === 'social') {
+    const ctxArr   = answers.context || [];
+    const primary  = ctxArr[0];
+    const reviews  = (primary && TESTIMONIALS[primary]) || DEFAULT_TESTIMONIALS;
+    return (
+      <div className="onboarding">
+        <div className="immersion-progress-bar-track">
+          <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="immersion-content">
+          <span className="onboarding-phase-label">YOU'RE NOT ALONE</span>
+          <h2 className="onboarding-headline immersion-headline">
+            50,000+ learners stopped struggling.
+          </h2>
+          <p className="onboarding-body immersion-subtext">People who were exactly where you are now.</p>
+          {reviews.map((r, i) => (
+            <div className="review-card" key={i} style={{ marginTop: i === 0 ? 16 : 10 }}>
+              <div className="review-avatar" style={{ background: r.color }}>{r.initial}</div>
+              <div className="review-content">
+                <div className="review-name">{r.name} <span className="review-location">— {r.location}</span></div>
+                <div className="review-stars">{'★'.repeat(5)}</div>
+                <p className="review-quote">"{r.quote}"</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="onboarding-actions">
+          <button className="onboarding-next-btn" onClick={next}>Continue →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Vision screen ─────────────────────────────────────────────────────────────
+  if (screen.type === 'vision') {
+    const target = getVisionText(answers);
+    return (
+      <div className="onboarding">
+        <div className="immersion-progress-bar-track">
+          <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="immersion-content mirror-screen">
+          <span className="onboarding-phase-label">YOUR NEW NORMAL</span>
+          <div className="mirror-quote-block">
+            <p className="mirror-quote-text">
+              Imagine this time next week.
+            </p>
+            <p className="mirror-quote-text" style={{ marginTop: 16 }}>
+              You're reading <strong>{target}</strong>. A kanji appears you don't know. You tap it. The meaning, reading, and context appear instantly.
+            </p>
+            <p className="mirror-quote-text" style={{ marginTop: 16 }}>
+              You never left the page. You never broke your flow.
+            </p>
+            <p className="mirror-quote-text mirror-quote-emphasis">
+              That's what UnBlur does.
+            </p>
           </div>
         </div>
         <div className="onboarding-actions">
@@ -338,74 +804,59 @@ export default function OnboardingScreen({ onDone }) {
     );
   }
 
-  // Rating screen
-  if (screen.type === 'rating') {
-    const displayRating = hoverRating || rating;
+  // ── Plan generation ───────────────────────────────────────────────────────────
+  if (screen.type === 'plan') {
+    const items    = getPlanItems(answers);
+    const allDone  = planStep >= items.length;
     return (
       <div className="onboarding">
         <div className="immersion-progress-bar-track">
           <div className="immersion-progress-bar-fill" style={{ width: `${progress}%` }} />
         </div>
         <div className="immersion-content">
-          <span className="onboarding-phase-label">LOVED BY LEARNERS</span>
-
-          <div className="rating-ask">
-            <h2 className="rating-ask-heading">Give us a rating</h2>
-            <div
-              className="rating-stars"
-              onMouseLeave={() => setHoverRating(0)}
-            >
-              {[1,2,3,4,5].map(n => (
-                <button
-                  key={n}
-                  className="rating-star-btn"
-                  onClick={() => {
-                    setRating(n);
-                    if (n >= 4 && Capacitor.isNativePlatform()) {
-                      InAppReview.requestReview();
-                    }
-                  }}
-                  onMouseEnter={() => setHoverRating(n)}
-                  aria-label={`${n} star`}
-                >
-                  <StarIcon filled={n <= displayRating} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <h2 className="onboarding-headline immersion-headline" style={{ marginTop: 24 }}>People are already reading more.</h2>
-
-          <div className="review-card">
-            <div className="review-avatar" style={{ background: '#4c6ef5' }}>S</div>
-            <div className="review-content">
-              <div className="review-name">Sarah K. <span className="review-location">— Tokyo</span></div>
-              <div className="review-stars">{'★'.repeat(5)}</div>
-              <p className="review-quote">"Finally I can read manga without stopping every 5 seconds. UnBlur completely changed how I study."</p>
-            </div>
-          </div>
-
-          <div className="review-card" style={{ marginTop: 10 }}>
-            <div className="review-avatar" style={{ background: '#0ea5e9' }}>M</div>
-            <div className="review-content">
-              <div className="review-name">Marcus T. <span className="review-location">— New York</span></div>
-              <div className="review-stars">{'★'.repeat(5)}</div>
-              <p className="review-quote">"Went from struggling through menus to reading signs confidently. Absolutely worth it."</p>
-            </div>
+          <span className="onboarding-phase-label">YOUR READING PLAN</span>
+          <h2 className="onboarding-headline immersion-headline">
+            {allDone ? 'Your plan is ready.' : 'Building your personal plan…'}
+          </h2>
+          <div className="plan-items">
+            {items.map((item, i) => (
+              <div key={i} className={`plan-item${i < planStep ? ' done' : ''}`}>
+                <div className="plan-item-check">
+                  {i < planStep ? (
+                    <svg viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="9" fill="#4c6ef5" />
+                      <polyline points="6,10 9,13 14,7" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <div className="plan-item-pending" />
+                  )}
+                </div>
+                <div className="plan-item-text">
+                  <span className="plan-item-label">{item.label}</span>
+                  <span className="plan-item-value">{i < planStep ? item.value : '…'}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
         <div className="onboarding-actions">
-          <button className="onboarding-next-btn" onClick={next}>
-            {rating >= 4 ? "Let's go! →" : "Continue →"}
+          <button
+            className={`onboarding-next-btn${!allDone ? ' disabled' : ''}`}
+            onClick={allDone ? next : undefined}
+            disabled={!allDone}
+          >
+            My plan is ready →
           </button>
         </div>
       </div>
     );
   }
 
-  // Question screen
-  const ans = screen.multiSelect ? (answers[screen.id] || []) : answers[screen.id];
+  // ── Question screen ───────────────────────────────────────────────────────────
+  const ans        = screen.multiSelect ? (answers[screen.id] || []) : answers[screen.id];
   const isSelected = (optId) => screen.multiSelect ? ans.includes(optId) : ans === optId;
+
+  const FREQ_CALLOUT = { constant: '30+', frequent: '10–15', occasional: '5–10', stopped: 'too many' };
 
   return (
     <div className="onboarding">
@@ -442,6 +893,13 @@ export default function OnboardingScreen({ onDone }) {
             </button>
           ))}
         </div>
+
+        {screen.id === 'frequency' && answers.frequency && (
+          <div className="frequency-callout">
+            That's up to <strong>{FREQ_CALLOUT[answers.frequency]} interruptions</strong> per reading session.
+            UnBlur eliminates every single one.
+          </div>
+        )}
       </div>
 
       <div className="onboarding-actions">
@@ -450,7 +908,7 @@ export default function OnboardingScreen({ onDone }) {
           onClick={canContinue(screen) ? next : undefined}
           disabled={!canContinue(screen)}
         >
-          {isLast ? "Let's go →" : 'Continue'}
+          Continue
         </button>
       </div>
     </div>
