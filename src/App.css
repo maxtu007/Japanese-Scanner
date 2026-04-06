@@ -2652,6 +2652,14 @@ rt {
   margin: 0;
 }
 
+.rating-ask-heading {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
 .rating-stars {
   display: flex;
   gap: 4px;

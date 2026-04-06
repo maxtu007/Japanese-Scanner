@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { InAppReview } from '@capacitor-community/in-app-review';
 
 // ── Welcome slides ────────────────────────────────────────────────────────────
 const WELCOME_SLIDES = [
@@ -170,6 +172,10 @@ const SCREENS = [
     ],
   },
   {
+    type: 'rating',
+    id: 'rate',
+  },
+  {
     type: 'marketing',
     id: 'stat',
   },
@@ -186,10 +192,6 @@ const SCREENS = [
       { id: 'grammar', label: 'Understand grammar better',  sub: 'See patterns explained in context' },
       { id: 'basics',  label: 'Just get the basics',        sub: 'Communicate what I need' },
     ],
-  },
-  {
-    type: 'rating',
-    id: 'rate',
   },
 ];
 
@@ -263,8 +265,6 @@ export default function OnboardingScreen({ onDone }) {
   if (phase === 'welcome') {
     return (
       <div className="onboarding" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <button className="onboarding-skip" onClick={onDone}>Skip</button>
-
         <div className="onboarding-slides">
           <div className="onboarding-track" style={{ transform: `translateX(-${welcomeIdx * 100}%)` }}>
             {WELCOME_SLIDES.map(s => (
@@ -348,7 +348,33 @@ export default function OnboardingScreen({ onDone }) {
         </div>
         <div className="immersion-content">
           <span className="onboarding-phase-label">LOVED BY LEARNERS</span>
-          <h2 className="onboarding-headline immersion-headline">People are already reading more.</h2>
+
+          <div className="rating-ask">
+            <h2 className="rating-ask-heading">Give us a rating</h2>
+            <div
+              className="rating-stars"
+              onMouseLeave={() => setHoverRating(0)}
+            >
+              {[1,2,3,4,5].map(n => (
+                <button
+                  key={n}
+                  className="rating-star-btn"
+                  onClick={() => {
+                    setRating(n);
+                    if (n >= 4 && Capacitor.isNativePlatform()) {
+                      InAppReview.requestReview();
+                    }
+                  }}
+                  onMouseEnter={() => setHoverRating(n)}
+                  aria-label={`${n} star`}
+                >
+                  <StarIcon filled={n <= displayRating} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <h2 className="onboarding-headline immersion-headline" style={{ marginTop: 24 }}>People are already reading more.</h2>
 
           <div className="review-card">
             <div className="review-avatar" style={{ background: '#4c6ef5' }}>S</div>
@@ -367,32 +393,11 @@ export default function OnboardingScreen({ onDone }) {
               <p className="review-quote">"Went from struggling through menus to reading signs confidently. Absolutely worth it."</p>
             </div>
           </div>
-
-          <div className="rating-ask">
-            <p className="rating-ask-text">How excited are you to start?</p>
-            <div
-              className="rating-stars"
-              onMouseLeave={() => setHoverRating(0)}
-            >
-              {[1,2,3,4,5].map(n => (
-                <button
-                  key={n}
-                  className="rating-star-btn"
-                  onClick={() => setRating(n)}
-                  onMouseEnter={() => setHoverRating(n)}
-                  aria-label={`${n} star`}
-                >
-                  <StarIcon filled={n <= displayRating} />
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
         <div className="onboarding-actions">
-          <button className="onboarding-next-btn" onClick={onDone}>
-            {rating >= 4 ? "Let's go! →" : "Start reading →"}
+          <button className="onboarding-next-btn" onClick={next}>
+            {rating >= 4 ? "Let's go! →" : "Continue →"}
           </button>
-          <button className="onboarding-signin-link" onClick={onDone}>Skip for now</button>
         </div>
       </div>
     );
@@ -447,7 +452,6 @@ export default function OnboardingScreen({ onDone }) {
         >
           {isLast ? "Let's go →" : 'Continue'}
         </button>
-        <button className="onboarding-signin-link" onClick={onDone}>Skip for now</button>
       </div>
     </div>
   );

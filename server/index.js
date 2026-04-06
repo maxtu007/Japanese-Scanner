@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import helmet from 'helmet';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { loadJMdict, lookupLocal, isLoaded } from './jmdict.js';
@@ -12,6 +13,7 @@ const app       = express();
 const PORT      = process.env.PORT || 3001;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 app.set('trust proxy', 1);
 
@@ -54,6 +56,14 @@ const ocrLimiter = rateLimit({
   message: { error: 'OCR rate limit exceeded. Try again in an hour.' },
 });
 
+const translateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Translate rate limit exceeded. Try again in an hour.' },
+});
+
 const explainLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 300,
@@ -66,6 +76,11 @@ const explainLimiter = rateLimit({
 // Keyed by lookup word. Survives for the lifetime of the server process.
 // Covers both local-JMdict hits and Jisho fallback results.
 const responseCache = new Map();
+
+// ── Explain cache ─────────────────────────────────────────────────────────────
+// Keyed by "word:reading". Shared across all users — same word only calls
+// Gemini once per server session regardless of how many users tap it.
+const explainCache = new Map();
 
 // ── Jisho fallback ────────────────────────────────────────────────────────────
 async function jishoLookup(word) {
@@ -162,7 +177,7 @@ app.post('/api/ocr', requireAuth, ocrLimiter, async (req, res) => {
 });
 
 // ── Translate route ───────────────────────────────────────────────────────────
-app.post('/api/translate', requireAuth, async (req, res) => {
+app.post('/api/translate', requireAuth, translateLimiter, async (req, res) => {
   const { rawText } = req.body;
   if (!rawText?.trim()) return res.json({ sentences: [], translations: [], translation: '' });
 
@@ -210,6 +225,11 @@ app.post('/api/explain', requireAuth, explainLimiter, async (req, res) => {
   const { word, reading, sentence } = req.body;
   if (!word || !sentence) return res.status(400).json({ error: 'Missing word or sentence' });
 
+  const cacheKey = `${word}:${reading || ''}`;
+  if (explainCache.has(cacheKey)) {
+    return res.json({ explanation: explainCache.get(cacheKey) });
+  }
+
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return res.status(500).json({ error: 'Explain not configured on server' });
 
@@ -233,6 +253,7 @@ In 1-2 short sentences, explain what "${word}" means in this specific context. B
 
   const json        = await geminiRes.json();
   const explanation = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim() || null;
+  if (explanation) explainCache.set(cacheKey, explanation);
   res.json({ explanation });
 });
 
