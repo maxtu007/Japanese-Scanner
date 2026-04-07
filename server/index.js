@@ -154,7 +154,7 @@ app.post('/api/ocr', requireAuth, ocrLimiter, async (req, res) => {
       .map((p) => (p.words ?? []).flatMap((w) => (w.symbols ?? []).map((s) => s.text)).join(''))
       .filter((t) => t.length > 0);
     return {
-      text:        paragraphTexts.join('\n'),
+      text:        paragraphTexts.join(''),
       boundingBox: block.boundingBox ?? null,
       confidence:  block.confidence  ?? null,
       paragraphs:  block.paragraphs  ?? [],

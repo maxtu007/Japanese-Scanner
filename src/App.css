@@ -408,10 +408,9 @@ body {
   font-size: 22px;
   line-height: 2.8;
   letter-spacing: 0.03em;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 1px;
+  display: block;
+  text-align: justify;
+  text-justify: inter-character;
 }
 
 ruby {

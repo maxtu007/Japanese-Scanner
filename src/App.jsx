@@ -128,7 +128,13 @@ export default function App() {
         throw new Error('Could not extract readable text. Try a clearer image.');
       }
 
-      const rawCombined = cleanedRegions.join('\n\n');
+      // Join regions with double newline (paragraph separator), then collapse
+      // any remaining single newlines — these are OCR line-break artifacts from
+      // Vision splitting one continuous sentence across multiple detected lines.
+      // Keeping them causes Claude to treat each physical line as a separate
+      // sentence. Double newlines (real paragraph/block boundaries) are preserved.
+      const rawCombined = cleanedRegions.join('\n\n')
+        .replace(/([^\n])\n([^\n])/g, '$1$2');
 
       setStatus('Translating…');
       const { sentences: sentenceTexts, translations } = await cleanAndTranslate(rawCombined);
@@ -281,13 +287,7 @@ export default function App() {
             <div />
           )}
           <div className="wordmark-sm">Un<em>blur</em></div>
-          <button className="signout-btn" onClick={signOut} title="Sign out" aria-label="Sign out">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </button>
+          <div />
         </header>
       )}
 
