@@ -49,6 +49,7 @@ export default function App() {
   const [showPaywall, setShowPaywall] = useState(
     () => !localStorage.getItem('unblur-paywall-seen')
   );
+  const [paywallKey, setPaywallKey] = useState(0);
 
   const onboardingRef = useRef(null);
 
@@ -226,13 +227,44 @@ export default function App() {
     return (
       <>
         <OnboardingScreen ref={onboardingRef} onDone={handleOnboardingDone} />
-        {import.meta.env.DEV && <DevPanel onboardingRef={onboardingRef} showOnboarding={true} onResetOnboarding={() => {}} />}
+        {import.meta.env.DEV && (
+          <DevPanel
+            onboardingRef={onboardingRef}
+            showOnboarding={true}
+            showPaywall={false}
+            onResetOnboarding={() => {}}
+            onResetPaywall={() => {
+              localStorage.removeItem('unblur-paywall-seen');
+              setShowOnboarding(false);
+              setShowPaywall(true);
+              setPaywallKey(k => k + 1);
+            }}
+          />
+        )}
       </>
     );
   }
 
   if (showPaywall) {
-    return <PaywallScreen onDone={handlePaywallDone} />;
+    return (
+      <>
+        <PaywallScreen key={paywallKey} onDone={handlePaywallDone} />
+        {import.meta.env.DEV && (
+          <DevPanel
+            onboardingRef={null}
+            showOnboarding={false}
+            showPaywall={true}
+            onResetOnboarding={() => {
+              localStorage.removeItem('unblur-onboarded');
+              localStorage.removeItem('unblur-paywall-seen');
+              setShowPaywall(false);
+              setShowOnboarding(true);
+            }}
+            onResetPaywall={() => setPaywallKey(k => k + 1)}
+          />
+        )}
+      </>
+    );
   }
 
   return (
@@ -410,9 +442,18 @@ export default function App() {
         <DevPanel
           onboardingRef={null}
           showOnboarding={false}
+          showPaywall={false}
           onResetOnboarding={() => {
             localStorage.removeItem('unblur-onboarded');
+            localStorage.removeItem('unblur-paywall-seen');
             setShowOnboarding(true);
+            setShowPaywall(true);
+            setPaywallKey(k => k + 1);
+          }}
+          onResetPaywall={() => {
+            localStorage.removeItem('unblur-paywall-seen');
+            setShowPaywall(true);
+            setPaywallKey(k => k + 1);
           }}
         />
       )}
@@ -421,7 +462,7 @@ export default function App() {
 }
 
 // ── Dev-only navigation panel ─────────────────────────────────────────────────
-function DevPanel({ onboardingRef, showOnboarding, onResetOnboarding }) {
+function DevPanel({ onboardingRef, showOnboarding, showPaywall, onResetOnboarding, onResetPaywall }) {
   const [open, setOpen] = useState(false);
 
   const s = {
@@ -463,14 +504,19 @@ function DevPanel({ onboardingRef, showOnboarding, onResetOnboarding }) {
                 <button style={s.navBtn} onClick={() => onboardingRef?.current?.next()}>▶</button>
               </div>
               <button style={s.btn} onClick={() => onboardingRef?.current?.goTo(0)}>↩ Restart onboarding</button>
+              <button style={s.btn} onClick={onResetPaywall}>⏭ Skip to paywall</button>
+            </>
+          ) : showPaywall ? (
+            <>
+              <button style={s.btn} onClick={onResetOnboarding}>↩ Go to onboarding</button>
+              <button style={s.btn} onClick={onResetPaywall}>↩ Restart paywall</button>
             </>
           ) : (
-            <button style={s.btn} onClick={onResetOnboarding}>↩ Go to onboarding</button>
+            <>
+              <button style={s.btn} onClick={onResetOnboarding}>↩ Go to onboarding</button>
+              <button style={s.btn} onClick={onResetPaywall}>💳 Go to paywall</button>
+            </>
           )}
-
-          <button style={{ ...s.btn, color: '#aaa', cursor: 'not-allowed' }} disabled>
-            Skip paywall (soon)
-          </button>
         </div>
       )}
       <button style={s.toggle} onClick={() => setOpen(v => !v)}>
