@@ -185,9 +185,8 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   align-items: center;
-  padding: 8px 4px 20px;
-  border-top: 1px solid #edf0fb;
-  background: #fff;
+  padding: 10px 4px 28px;
+  background: var(--accent);
 }
 
 .nav-item {
@@ -208,33 +207,31 @@ body {
 
 .nav-item span {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
 }
 
 .nav-item.active span {
-  color: var(--accent);
-}
-
-.nav-item:not(.active) span {
-  color: #c0c8e0;
+  color: #fff;
 }
 
 .nav-icon-bg {
-  width: 40px;
-  height: 36px;
-  border-radius: 12px;
+  width: 48px;
+  height: 40px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.15s;
 }
 
 .nav-icon-bg.active {
-  background: #eef1fe;
+  background: rgba(255,255,255,0.2);
 }
 
 .nav-icon-bg svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -242,11 +239,176 @@ body {
 }
 
 .nav-icon-bg.active svg {
-  stroke: var(--accent);
+  stroke: #fff;
 }
 
 .nav-icon-bg:not(.active) svg {
-  stroke: #c0c8e0;
+  stroke: rgba(255,255,255,0.55);
+}
+
+/* ── Account Tab ── */
+.account-tab {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  background: #f2f2f7;
+  padding: 20px 0 40px;
+}
+
+.acct-hero {
+  padding: 24px 20px 28px;
+}
+
+.acct-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 100px;
+  padding: 5px 13px;
+  margin-bottom: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.acct-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+.acct-hero-heading {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  font-size: 50px;
+  letter-spacing: -2px;
+  line-height: 0.95;
+  color: var(--navy);
+  margin-bottom: 24px;
+}
+
+.acct-hero-accent { color: var(--accent); }
+
+.acct-hero-star {
+  width: 36px;
+  height: 36px;
+  color: #f59e0b;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  position: relative;
+  top: -4px;
+}
+
+.acct-hero-sub {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.acct-hero-rule {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 22px;
+}
+
+.acct-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.acct-feature-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.acct-feature-check {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke: var(--accent);
+}
+
+.acct-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  padding: 0 20px 7px;
+  margin-top: 4px;
+}
+
+.acct-group {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 0 16px 20px;
+}
+
+.acct-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.acct-row:active { background: rgba(0,0,0,0.04); }
+
+.acct-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.acct-row-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--accent);
+}
+
+.acct-row-text { flex: 1; }
+
+.acct-chevron {
+  width: 15px;
+  height: 15px;
+  stroke: #c8cdd8;
+  flex-shrink: 0;
+}
+
+.acct-row-danger .acct-row-icon { background: var(--error-bg); }
+.acct-row-danger .acct-row-icon svg { stroke: var(--error-text); }
+.acct-row-danger .acct-row-text { color: var(--error-text); }
+
+.acct-divider {
+  height: 1px;
+  background: var(--border);
+  margin-left: 58px;
 }
 
 /* ── Wordmark (small, for header in processing/results) ── */
