@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Upload from './components/Upload';
 import TextDisplay from './components/TextDisplay';
 import WordModal from './components/WordModal';
@@ -8,6 +8,7 @@ import HistoryTab from './components/HistoryTab';
 import AudioBar from './components/AudioBar';
 import SplashScreen from './components/SplashScreen';
 import OnboardingScreen from './components/OnboardingScreen';
+import PaywallScreen from './components/PaywallScreen';
 import { useAuth } from './contexts/AuthContext';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
@@ -45,10 +46,20 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('unblur-onboarded')
   );
+  const [showPaywall, setShowPaywall] = useState(
+    () => !localStorage.getItem('unblur-paywall-seen')
+  );
+
+  const onboardingRef = useRef(null);
 
   const handleOnboardingDone = useCallback(() => {
     localStorage.setItem('unblur-onboarded', '1');
     setShowOnboarding(false);
+  }, []);
+
+  const handlePaywallDone = useCallback(() => {
+    localStorage.setItem('unblur-paywall-seen', '1');
+    setShowPaywall(false);
   }, []);
 
   const [phase, setPhase] = useState('upload'); // 'upload' | 'processing' | 'results'
@@ -212,7 +223,16 @@ export default function App() {
   }
 
   if (showOnboarding) {
-    return <OnboardingScreen onDone={handleOnboardingDone} />;
+    return (
+      <>
+        <OnboardingScreen ref={onboardingRef} onDone={handleOnboardingDone} />
+        {import.meta.env.DEV && <DevPanel onboardingRef={onboardingRef} showOnboarding={true} onResetOnboarding={() => {}} />}
+      </>
+    );
+  }
+
+  if (showPaywall) {
+    return <PaywallScreen onDone={handlePaywallDone} />;
   }
 
   return (
@@ -385,6 +405,77 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {import.meta.env.DEV && (
+        <DevPanel
+          onboardingRef={null}
+          showOnboarding={false}
+          onResetOnboarding={() => {
+            localStorage.removeItem('unblur-onboarded');
+            setShowOnboarding(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Dev-only navigation panel ─────────────────────────────────────────────────
+function DevPanel({ onboardingRef, showOnboarding, onResetOnboarding }) {
+  const [open, setOpen] = useState(false);
+
+  const s = {
+    wrap: {
+      position: 'fixed', bottom: 80, right: 12, zIndex: 9999,
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6,
+    },
+    toggle: {
+      width: 36, height: 36, borderRadius: '50%', border: 'none',
+      background: '#ff3b30', color: '#fff', fontSize: 16, cursor: 'pointer',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    },
+    panel: {
+      background: 'rgba(0,0,0,0.85)', borderRadius: 10, padding: '8px 10px',
+      display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140,
+    },
+    label: { color: '#ff3b30', fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
+    btn: {
+      background: '#222', color: '#fff', border: '1px solid #444',
+      borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer', textAlign: 'left',
+    },
+    row: { display: 'flex', gap: 4 },
+    navBtn: {
+      flex: 1, background: '#222', color: '#fff', border: '1px solid #444',
+      borderRadius: 6, padding: '5px 0', fontSize: 14, cursor: 'pointer', textAlign: 'center',
+    },
+  };
+
+  return (
+    <div style={s.wrap}>
+      {open && (
+        <div style={s.panel}>
+          <div style={s.label}>DEV</div>
+
+          {showOnboarding ? (
+            <>
+              <div style={s.row}>
+                <button style={s.navBtn} onClick={() => onboardingRef?.current?.prev()}>◀</button>
+                <button style={s.navBtn} onClick={() => onboardingRef?.current?.next()}>▶</button>
+              </div>
+              <button style={s.btn} onClick={() => onboardingRef?.current?.goTo(0)}>↩ Restart onboarding</button>
+            </>
+          ) : (
+            <button style={s.btn} onClick={onResetOnboarding}>↩ Go to onboarding</button>
+          )}
+
+          <button style={{ ...s.btn, color: '#aaa', cursor: 'not-allowed' }} disabled>
+            Skip paywall (soon)
+          </button>
+        </div>
+      )}
+      <button style={s.toggle} onClick={() => setOpen(v => !v)}>
+        {open ? '✕' : '⚙'}
+      </button>
     </div>
   );
 }
