@@ -2191,29 +2191,75 @@ rt {
 }
 .btn-danger:hover { opacity: 0.85; }
 
-/* ── Auth Screen ─────────────────────────────────────────────────────────────── */
-.auth-screen {
+/* ── Auth Modal (bottom sheet) ───────────────────────────────────────────────── */
+.auth-overlay {
   position: fixed;
   inset: 0;
-  background: var(--bg);
+  background: rgba(0,0,0,0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 1000;
+  animation: auth-fade-in 0.2s ease;
 }
 
-.auth-card {
+@keyframes auth-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.auth-sheet {
   width: 100%;
-  max-width: 360px;
-  padding: 48px 28px 40px;
+  max-width: 480px;
+  background: var(--bg);
+  border-radius: 24px 24px 0 0;
+  padding: 36px 28px 48px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
+  position: relative;
+  animation: auth-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes auth-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.auth-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #888;
+  line-height: 0;
+}
+.auth-close-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.auth-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .auth-wordmark {
   text-align: center;
-  font-size: 28px;
+  font-size: 36px;
+}
+
+.auth-tagline {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
 }
 
 .auth-tabs {
@@ -2257,14 +2303,46 @@ rt {
   background: var(--bg);
   outline: none;
   transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .auth-input:focus {
   border-color: var(--accent);
 }
 
+.auth-password-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-forgot-link {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: right;
+  align-self: flex-end;
+}
+
+.auth-forgot-hint {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
 .auth-error {
-  color: var(--error-text);
+  color: var(--error-text, #e05);
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.auth-success {
+  color: #2a9d5c;
   font-size: 13px;
   padding: 0 2px;
 }
@@ -2286,6 +2364,17 @@ rt {
 .auth-submit-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.auth-link-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
 }
 
 /* ── Sign-out button (in header) ─────────────────────────────────────────────── */

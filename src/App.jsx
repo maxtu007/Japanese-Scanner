@@ -9,6 +9,7 @@ import AudioBar from './components/AudioBar';
 import SplashScreen from './components/SplashScreen';
 import OnboardingScreen from './components/OnboardingScreen';
 import PaywallScreen from './components/PaywallScreen';
+import AuthModal from './components/AuthModal';
 import { useAuth } from './contexts/AuthContext';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
@@ -42,6 +43,7 @@ async function generateThumbnail(objectURL) {
 export default function App() {
   const { user, session, signOut } = useAuth();
 
+  const [showAuth, setShowAuth] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('unblur-onboarded')
@@ -317,10 +319,6 @@ export default function App() {
                 <div className="account-tab">
                   {/* Premium hero */}
                   <div className="acct-hero">
-                    <div className="acct-active-pill">
-                      <span className="acct-active-dot"/>
-                      <span>Active</span>
-                    </div>
                     <h1 className="acct-hero-heading">
                       Unblur<br/>
                       <span className="acct-hero-accent">Premium</span>
@@ -356,14 +354,28 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Account */}
-                  <p className="acct-section-label">ACCOUNT</p>
+                  {/* Account & Sync */}
+                  <p className="acct-section-label">ACCOUNT &amp; SYNC</p>
                   <div className="acct-group">
-                    <button className="acct-row acct-row-danger" onClick={signOut}>
+                    {user && (
+                      <>
+                        <div className="acct-row" style={{cursor:'default'}}>
+                          <span className="acct-row-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                          </span>
+                          <span className="acct-row-text" style={{color:'var(--text-secondary,#888)',fontSize:'0.85rem'}}>{user.email}</span>
+                        </div>
+                        <div className="acct-divider"/>
+                      </>
+                    )}
+                    <button
+                      className={`acct-row${user ? ' acct-row-danger' : ''}`}
+                      onClick={user ? signOut : () => setShowAuth(true)}
+                    >
                       <span className="acct-row-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                       </span>
-                      <span className="acct-row-text">Sign Out</span>
+                      <span className="acct-row-text">{user ? 'Sign Out' : 'Sign In / Sign Up'}</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                   </div>
@@ -513,6 +525,10 @@ export default function App() {
           onRequestAdd={handleRequestAdd}
           isAdded={isAdded}
         />
+      )}
+
+      {showAuth && (
+        <AuthModal onClose={() => setShowAuth(false)} />
       )}
 
       {pendingFlashcard && (
