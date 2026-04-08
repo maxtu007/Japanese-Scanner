@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { InAppReview } from '@capacitor-community/in-app-review';
 import TextDisplay from './TextDisplay';
@@ -29,7 +29,7 @@ const WELCOME_SLIDES = [
       </svg>
     ),
     headline: 'Japanese is everywhere around you.',
-    body: 'Signs, menus, manga, novels. And right now, most of it is invisible to you.',
+    body: 'Novels, textbooks, manga. And right now, most of it is invisible to you.',
   },
   {
     id: 'w2',
@@ -393,7 +393,7 @@ function DemoWordPopup({ token, onClose }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function OnboardingScreen({ onDone }) {
+const OnboardingScreen = forwardRef(function OnboardingScreen({ onDone }, ref) {
   const [phase, setPhase]           = useState('welcome');
   const [welcomeIdx, setWelcomeIdx] = useState(0);
   const [screenIdx, setScreenIdx]   = useState(0);
@@ -409,6 +409,22 @@ export default function OnboardingScreen({ onDone }) {
   // Plan generation
   const [planStep, setPlanStep]     = useState(0);
   const touchStartX = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    prev: () => {
+      if (phase === 'welcome') setWelcomeIdx(i => Math.max(0, i - 1));
+      else setScreenIdx(i => Math.max(0, i - 1));
+    },
+    next: () => {
+      if (phase === 'welcome') welcomeNext();
+      else next();
+    },
+    goTo: (idx) => {
+      setPhase('immersion');
+      setScreenIdx(Math.max(0, Math.min(idx, SCREENS.length - 1)));
+    },
+    getInfo: () => ({ phase, screenIdx, welcomeIdx, total: SCREENS.length, totalWelcome: WELCOME_SLIDES.length }),
+  }));
 
   const totalScreens = SCREENS.length;
   const progress     = ((screenIdx + 1) / totalScreens) * 100;
@@ -674,7 +690,6 @@ export default function OnboardingScreen({ onDone }) {
 
   // ── Demo reaction ─────────────────────────────────────────────────────────────
   if (screen.type === 'demo-reaction') {
-    const displayRating = hoverRating || rating;
     return (
       <div className="onboarding">
         <div className="immersion-progress-bar-track">
@@ -686,10 +701,10 @@ export default function OnboardingScreen({ onDone }) {
 
           <div className="reaction-options">
             {[
-              { id: 'amazing',    label: '✨ That was incredible' },
-              { id: 'useful',     label: '👀 More useful than I expected' },
-              { id: 'surprised',  label: '😮 I didn\'t think it\'d work this well' },
-              { id: 'moretoexplore', label: '🤔 I want to explore more' },
+              { id: 'amazing',       label: 'That was incredible' },
+              { id: 'useful',        label: 'More useful than I expected' },
+              { id: 'surprised',     label: "I didn't think it'd work this well" },
+              { id: 'moretoexplore', label: 'I want to explore more' },
             ].map(r => (
               <button
                 key={r.id}
@@ -700,30 +715,6 @@ export default function OnboardingScreen({ onDone }) {
               </button>
             ))}
           </div>
-
-          {reaction && (
-            <div className="rating-ask" style={{ marginTop: 24 }}>
-              <h3 className="rating-ask-heading">If you're enjoying it, leave us a rating</h3>
-              <div className="rating-stars" onMouseLeave={() => setHoverRating(0)}>
-                {[1,2,3,4,5].map(n => (
-                  <button
-                    key={n}
-                    className="rating-star-btn"
-                    onClick={() => {
-                      setRating(n);
-                      if (n >= 4 && Capacitor.isNativePlatform()) {
-                        InAppReview.requestReview();
-                      }
-                    }}
-                    onMouseEnter={() => setHoverRating(n)}
-                    aria-label={`${n} star`}
-                  >
-                    <StarIcon filled={n <= displayRating} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <div className="onboarding-actions">
           <button
@@ -740,9 +731,10 @@ export default function OnboardingScreen({ onDone }) {
 
   // ── Social proof ──────────────────────────────────────────────────────────────
   if (screen.type === 'social') {
-    const ctxArr   = answers.context || [];
-    const primary  = ctxArr[0];
-    const reviews  = (primary && TESTIMONIALS[primary]) || DEFAULT_TESTIMONIALS;
+    const ctxArr      = answers.context || [];
+    const primary     = ctxArr[0];
+    const reviews     = (primary && TESTIMONIALS[primary]) || DEFAULT_TESTIMONIALS;
+    const displayRating = hoverRating || rating;
     return (
       <div className="onboarding">
         <div className="immersion-progress-bar-track">
@@ -750,7 +742,28 @@ export default function OnboardingScreen({ onDone }) {
         </div>
         <div className="immersion-content">
           <span className="onboarding-phase-label">YOU'RE NOT ALONE</span>
-          <h2 className="onboarding-headline immersion-headline">
+          <div className="rating-ask">
+            <h3 className="rating-ask-heading">If you're enjoying it, leave us a rating</h3>
+            <div className="rating-stars" onMouseLeave={() => setHoverRating(0)}>
+              {[1,2,3,4,5].map(n => (
+                <button
+                  key={n}
+                  className="rating-star-btn"
+                  onClick={() => {
+                    setRating(n);
+                    if (n >= 4 && Capacitor.isNativePlatform()) {
+                      InAppReview.requestReview();
+                    }
+                  }}
+                  onMouseEnter={() => setHoverRating(n)}
+                  aria-label={`${n} star`}
+                >
+                  <StarIcon filled={n <= displayRating} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <h2 className="onboarding-headline immersion-headline" style={{ marginTop: 28 }}>
             50,000+ learners stopped struggling.
           </h2>
           <p className="onboarding-body immersion-subtext">People who were exactly where you are now.</p>
@@ -766,7 +779,13 @@ export default function OnboardingScreen({ onDone }) {
           ))}
         </div>
         <div className="onboarding-actions">
-          <button className="onboarding-next-btn" onClick={next}>Continue →</button>
+          <button
+            className={`onboarding-next-btn${!rating ? ' disabled' : ''}`}
+            onClick={rating ? next : undefined}
+            disabled={!rating}
+          >
+            {rating >= 4 ? "Let's go →" : rating > 0 ? 'Continue →' : 'Continue →'}
+          </button>
         </div>
       </div>
     );
@@ -913,4 +932,6 @@ export default function OnboardingScreen({ onDone }) {
       </div>
     </div>
   );
-}
+});
+
+export default OnboardingScreen;
