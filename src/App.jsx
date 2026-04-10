@@ -96,11 +96,6 @@ export default function App() {
   }, [user]);
 
   async function handleFile(file) {
-    if (!user) {
-      setShowAuth(true);
-      return;
-    }
-
     const src = URL.createObjectURL(file);
     setImageSrc(src);
     setPhase('processing');

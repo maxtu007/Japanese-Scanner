@@ -116,7 +116,7 @@ async function jishoLookup(word) {
 }
 
 // ── OCR route ─────────────────────────────────────────────────────────────────
-app.post('/api/ocr', requireAuth, ocrLimiter, async (req, res) => {
+app.post('/api/ocr', ocrLimiter, async (req, res) => {
   const { imageData } = req.body;
   if (!imageData) return res.status(400).json({ error: 'Missing imageData' });
 
@@ -177,7 +177,7 @@ app.post('/api/ocr', requireAuth, ocrLimiter, async (req, res) => {
 });
 
 // ── Translate route ───────────────────────────────────────────────────────────
-app.post('/api/translate', requireAuth, translateLimiter, async (req, res) => {
+app.post('/api/translate', translateLimiter, async (req, res) => {
   const { rawText } = req.body;
   if (!rawText?.trim()) return res.json({ sentences: [], translations: [], translation: '' });
 
@@ -221,7 +221,7 @@ ${rawText}`,
 });
 
 // ── Explain route ─────────────────────────────────────────────────────────────
-app.post('/api/explain', requireAuth, explainLimiter, async (req, res) => {
+app.post('/api/explain', explainLimiter, async (req, res) => {
   const { word, reading, sentence } = req.body;
   if (!word || !sentence) return res.status(400).json({ error: 'Missing word or sentence' });
 
@@ -260,7 +260,7 @@ In 1-2 short sentences, explain what "${word}" means in this specific context. B
 });
 
 // ── Lookup route ──────────────────────────────────────────────────────────────
-app.get('/api/lookup', requireAuth, async (req, res) => {
+app.get('/api/lookup', async (req, res) => {
   const tapTime = Date.now();
   const word    = req.query.lemma || req.query.surface;
 
