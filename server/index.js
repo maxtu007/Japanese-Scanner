@@ -194,6 +194,7 @@ app.post('/api/translate', requireAuth, translateLimiter, async (req, res) => {
    - Normalize spacing and punctuation to standard Japanese conventions
    - Reconstruct natural sentences from fragmented lines
    - Remove noise, stray symbols, and OCR artifacts
+   - Remove standalone short words or phrases (≤6 characters) at the start that appear to be section labels, chapter markers, or inline annotations not grammatically connected to the following sentence
    - Split the output into individual sentences at sentence-ending punctuation (。！？)
    - Each array entry must be exactly one complete sentence
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
   loadHistory,
   createFolder,
@@ -24,6 +25,7 @@ function getAllScans(history) {
 }
 
 export default function HistoryTab({ onOpenScan }) {
+  const { user } = useAuth();
   const [history, setHistory] = useState({ folders: [] });
   const [expandedFolders, setExpandedFolders] = useState(new Set());
 
@@ -33,6 +35,8 @@ export default function HistoryTab({ onOpenScan }) {
       // Auto-expand the default folder
       const def = h.folders.find(f => f.isDefault) ?? h.folders[0];
       if (def) setExpandedFolders(new Set([def.id]));
+    }).catch(err => {
+      console.error('[history] loadHistory failed:', err.message);
     });
   }, []);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -350,6 +354,17 @@ export default function HistoryTab({ onOpenScan }) {
           </svg>
         </button>
       </div>
+
+      {/* Sign-in nudge */}
+      {!user && (
+        <div className="history-signin-nudge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>Sign in via the <strong>Account</strong> tab to save and view your scan history.</span>
+        </div>
+      )}
 
       {/* Folder list */}
       <div className="history-folders">

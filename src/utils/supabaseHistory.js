@@ -89,29 +89,34 @@ function normalizeScan(row) {
 // ── Ensure user has a default folder ─────────────────────────────────────────
 
 async function ensureDefaultFolder(userId) {
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from('scan_folders')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
+  if (error) { console.error('[history] ensureDefaultFolder count:', error.message); return; }
   if (count === 0) {
-    await supabase.from('scan_folders').insert({
+    const { error: insertErr } = await supabase.from('scan_folders').insert({
       user_id:    userId,
       name:       'Default Folder',
       is_default: true,
     });
+    if (insertErr) console.error('[history] ensureDefaultFolder insert:', insertErr.message);
   }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function loadHistory() {
-  const { data: { user } } = await supabase.auth.getUser();
-  await ensureDefaultFolder(user.id);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Not authenticated');
+  await ensureDefaultFolder(session.user.id);
   return fetchHistory();
 }
 
 export async function addScan({ name, thumbnail, japanese, translation, tokenBlocks }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Not authenticated');
+  const user = session.user;
 
   // Find the default folder
   const { data: folders } = await supabase
@@ -135,7 +140,7 @@ export async function addScan({ name, thumbnail, japanese, translation, tokenBlo
     translation:  translation || '',
     token_blocks: tokenBlocks || [],
   });
-  if (error) console.error('[history] addScan:', error);
+  if (error) console.error('[history] addScan error:', error.code, error.message, error.details);
   return fetchHistory();
 }
 

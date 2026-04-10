@@ -14,7 +14,7 @@ import { useAuth } from './contexts/AuthContext';
 import { cleanAndTranslate, preprocessOCRText } from './utils/claude';
 import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
-import { tokenizeLines, tokenizeSentence, hasJapanese } from './utils/japanese';
+import { tokenizeSentence, hasJapanese } from './utils/japanese';
 import { loadDecks } from './utils/supabaseDecks';
 import { addScan } from './utils/supabaseHistory';
 import { migrateLocalStorageToSupabase } from './utils/migrate';
@@ -41,7 +41,7 @@ async function generateThumbnail(objectURL) {
 
 
 export default function App() {
-  const { user, session, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [showAuth, setShowAuth] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
@@ -119,7 +119,33 @@ export default function App() {
         ? visionResult.blocks
         : [{ text: visionResult.fullText, boundingBox: null }];
 
-      const regions = reconstructLayout(rawBlocks, visionResult.pageWidth, visionResult.pageHeight);
+      // Detect tategumi (vertical text): blocks taller than wide.
+      // Vision already returns fullText in correct reading order for vertical Japanese,
+      // so skip the manga-layout reconstructor and use fullText directly.
+      const isVerticalLayout = (() => {
+        const boxed = rawBlocks.filter(b => b.boundingBox?.vertices?.length >= 4);
+        if (boxed.length < 3) return false;
+        const tallCount = boxed.filter(b => {
+          const xs = b.boundingBox.vertices.map(v => v.x ?? 0);
+          const ys = b.boundingBox.vertices.map(v => v.y ?? 0);
+          const w = Math.max(...xs) - Math.min(...xs);
+          const h = Math.max(...ys) - Math.min(...ys);
+          return h > w * 1.2;
+        }).length;
+        return tallCount / boxed.length > 0.5;
+      })();
+
+      // For vertical text, Vision sometimes places a short section marker / annotation
+      // on its own line at the top of the fullText before the actual body text starts.
+      // Strip these leading short lines (≤6 kana/kanji chars, no sentence-ending punct).
+      const verticalFullText = visionResult.fullText.replace(
+        /^([\u3040-\u30FF\u4E00-\u9FFF\uFF00-\uFFEF]{1,6})\n+/,
+        (match, line) => /[。、！？…」』）]$/.test(line) ? match : ''
+      );
+
+      const regions = isVerticalLayout
+        ? [{ text: verticalFullText }]
+        : reconstructLayout(rawBlocks, visionResult.pageWidth, visionResult.pageHeight);
       const effectiveRegions = regions.length > 0 ? regions : [{ text: visionResult.fullText }];
 
       const cleanedRegions = effectiveRegions
@@ -155,23 +181,25 @@ export default function App() {
       setTokenBlocks(pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : []);
       setShowTranslations(false);
 
-      // Save to history (Supabase)
-      try {
-        const thumbnail = src ? await generateThumbnail(src) : '';
-        const japanesePreview = pairedSentences
-          .slice(0, 5)
-          .map(s => s.tokens.map(t => t.surface_form).join(''))
-          .join('');
-        const titleText = japanesePreview.slice(0, 28) || '(Scan)';
-        await addScan({
-          name: titleText,
-          thumbnail,
-          japanese: japanesePreview,
-          translation: pairedSentences[0]?.translation ?? '',
-          tokenBlocks: pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : [],
-        });
-      } catch (e) {
-        console.warn('[history] Failed to save scan:', e);
+      // Save to history (Supabase) — only when authenticated
+      if (user) {
+        try {
+          const thumbnail = src ? await generateThumbnail(src) : '';
+          const japanesePreview = pairedSentences
+            .slice(0, 5)
+            .map(s => s.tokens.map(t => t.surface_form).join(''))
+            .join('');
+          const titleText = japanesePreview.slice(0, 28) || '(Scan)';
+          await addScan({
+            name: titleText,
+            thumbnail,
+            japanese: japanesePreview,
+            translation: pairedSentences[0]?.translation ?? '',
+            tokenBlocks: pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : [],
+          });
+        } catch (e) {
+          console.error('[history] Failed to save scan:', e);
+        }
       }
 
       setPhase('results');

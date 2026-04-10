@@ -1898,6 +1898,65 @@ rt {
   padding-bottom: 20px;
 }
 
+.history-signin-nudge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.history-signin-nudge svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+.history-signin-nudge strong {
+  color: var(--text);
+}
+
+.history-auth-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 32px 32px;
+  gap: 12px;
+}
+.history-auth-gate-icon {
+  width: 52px;
+  height: 52px;
+  color: var(--muted);
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+.history-auth-gate-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.history-auth-gate-body {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0;
+}
+.history-auth-gate-hint {
+  font-size: 13px;
+  color: var(--muted);
+  opacity: 0.75;
+  margin: 4px 0 0;
+}
+
 .history-empty {
   text-align: center;
   color: var(--muted);
