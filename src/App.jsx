@@ -96,6 +96,11 @@ export default function App() {
   }, [user]);
 
   async function handleFile(file) {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+
     const src = URL.createObjectURL(file);
     setImageSrc(src);
     setPhase('processing');
@@ -135,16 +140,8 @@ export default function App() {
         return tallCount / boxed.length > 0.5;
       })();
 
-      // For vertical text, Vision sometimes places a short section marker / annotation
-      // on its own line at the top of the fullText before the actual body text starts.
-      // Strip these leading short lines (≤6 kana/kanji chars, no sentence-ending punct).
-      const verticalFullText = visionResult.fullText.replace(
-        /^([\u3040-\u30FF\u4E00-\u9FFF\uFF00-\uFFEF]{1,6})\n+/,
-        (match, line) => /[。、！？…」』）]$/.test(line) ? match : ''
-      );
-
       const regions = isVerticalLayout
-        ? [{ text: verticalFullText }]
+        ? [{ text: visionResult.fullText }]
         : reconstructLayout(rawBlocks, visionResult.pageWidth, visionResult.pageHeight);
       const effectiveRegions = regions.length > 0 ? regions : [{ text: visionResult.fullText }];
 
