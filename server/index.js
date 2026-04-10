@@ -194,7 +194,6 @@ app.post('/api/translate', requireAuth, translateLimiter, async (req, res) => {
    - Normalize spacing and punctuation to standard Japanese conventions
    - Reconstruct natural sentences from fragmented lines
    - Remove noise, stray symbols, and OCR artifacts
-   - Remove standalone short words or phrases (≤6 characters) at the start that appear to be section labels, chapter markers, or inline annotations not grammatically connected to the following sentence
    - Split the output into individual sentences at sentence-ending punctuation (。！？)
    - Each array entry must be exactly one complete sentence
 
@@ -249,6 +248,8 @@ In 1-2 short sentences, explain what "${word}" means in this specific context. B
   );
 
   if (!geminiRes.ok) {
+    const errBody = await geminiRes.text().catch(() => '');
+    console.error(`[explain] Gemini ${geminiRes.status}:`, errBody.slice(0, 300));
     return res.status(502).json({ error: `Gemini error: ${geminiRes.status}` });
   }
 
