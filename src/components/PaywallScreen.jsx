@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getOffering, purchasePackage, restorePurchases, isNative } from '../utils/purchases';
 
 const YEARLY  = 49.99;
 const MONTHLY = 12.99;
@@ -98,7 +99,7 @@ function Step1({ onNext }) {
 }
 
 /* ── Step 2: Paywall ── */
-function Step2({ plan, setPlan, billingDate, onNext }) {
+function Step2({ plan, setPlan, billingDate, onNext, purchasing }) {
   return (
     <div className="pw-body">
       <div className="pw-scroll">
@@ -190,7 +191,9 @@ function Step2({ plan, setPlan, billingDate, onNext }) {
 
       <div className="pw-footer">
         <NoPayment />
-        <button className="pw-cta" onClick={onNext}>Start My 3-Day Free Trial</button>
+        <button className="pw-cta" onClick={onNext} disabled={purchasing}>
+          {purchasing ? 'Processing…' : 'Start My 3-Day Free Trial'}
+        </button>
         <p className="pw-fine">
           {plan === 'yearly'
             ? `3 days free, then $${YEARLY} per year ($${PER_MO}/mo)`
@@ -203,12 +206,58 @@ function Step2({ plan, setPlan, billingDate, onNext }) {
 
 /* ── Root ── */
 export default function PaywallScreen({ onDone }) {
-  const [step, setStep]   = useState(0);
-  const [plan, setPlan]   = useState('yearly');
-  const billingDate       = getBillingDate();
+  const [step, setStep]       = useState(0);
+  const [plan, setPlan]       = useState('yearly');
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring]   = useState(false);
+  const [purchaseErr, setPurchaseErr] = useState(null);
+  const [offering, setOffering]     = useState(null);
+  const billingDate = getBillingDate();
+
+  useEffect(() => {
+    getOffering().then(o => setOffering(o));
+  }, []);
 
   function back() { if (step > 0) setStep(s => s - 1); }
-  function next() { if (step < 2) setStep(s => s + 1); else onDone(); }
+  function next() { if (step < 2) { setPurchaseErr(null); setStep(s => s + 1); } }
+
+  async function handlePurchase() {
+    setPurchaseErr(null);
+    if (!isNative()) { onDone(); return; } // dev fallback
+    const pkg = plan === 'yearly'
+      ? offering?.annual ?? offering?.availablePackages?.find(p => p.packageType === 'ANNUAL')
+      : offering?.monthly ?? offering?.availablePackages?.find(p => p.packageType === 'MONTHLY');
+    if (!pkg) { setPurchaseErr('Product not available. Please try again.'); return; }
+    setPurchasing(true);
+    try {
+      const hasPremium = await purchasePackage(pkg);
+      if (hasPremium) onDone();
+      else setPurchaseErr('Purchase completed but subscription not found. Try restoring.');
+    } catch (e) {
+      if (e?.message?.includes('cancelled') || e?.code === 'USER_CANCELLED') {
+        // user cancelled — do nothing
+      } else {
+        setPurchaseErr(e?.message || 'Purchase failed. Please try again.');
+      }
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  async function handleRestore() {
+    setPurchaseErr(null);
+    if (!isNative()) return;
+    setRestoring(true);
+    try {
+      const hasPremium = await restorePurchases();
+      if (hasPremium) onDone();
+      else setPurchaseErr('No active subscription found.');
+    } catch (e) {
+      setPurchaseErr(e?.message || 'Restore failed. Please try again.');
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   return (
     <div className="pw-root">
@@ -220,12 +269,26 @@ export default function PaywallScreen({ onDone }) {
         >
           ‹
         </button>
-        <button className="pw-restore">Restore</button>
+        <button className="pw-restore" onClick={handleRestore} disabled={restoring}>
+          {restoring ? '…' : 'Restore'}
+        </button>
       </div>
 
       {step === 0 && <Step0 onNext={next} />}
       {step === 1 && <Step1 onNext={next} />}
-      {step === 2 && <Step2 plan={plan} setPlan={setPlan} billingDate={billingDate} onNext={next} />}
+      {step === 2 && (
+        <Step2
+          plan={plan}
+          setPlan={setPlan}
+          billingDate={billingDate}
+          onNext={handlePurchase}
+          purchasing={purchasing}
+        />
+      )}
+
+      {purchaseErr && (
+        <div className="pw-error">{purchaseErr}</div>
+      )}
     </div>
   );
 }

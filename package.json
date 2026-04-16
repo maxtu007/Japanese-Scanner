@@ -15,6 +15,7 @@
     "@capacitor-community/in-app-review": "^8.0.0",
     "@capacitor/core": "^8.3.0",
     "@capacitor/ios": "^8.3.0",
+    "@revenuecat/purchases-capacitor": "^13.0.0",
     "@supabase/supabase-js": "^2.101.1",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
@@ -27,6 +28,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.6.1",
     "@vitejs/plugin-react": "^4.3.1",
     "path-browserify": "^1.0.1",

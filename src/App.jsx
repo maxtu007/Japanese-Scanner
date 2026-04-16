@@ -18,6 +18,7 @@ import { tokenizeSentence, hasJapanese } from './utils/japanese';
 import { loadDecks } from './utils/supabaseDecks';
 import { addScan } from './utils/supabaseHistory';
 import { migrateLocalStorageToSupabase } from './utils/migrate';
+import { initPurchases, checkEntitlement } from './utils/purchases';
 
 async function generateThumbnail(objectURL) {
   return new Promise((resolve) => {
@@ -54,6 +55,18 @@ export default function App() {
   const [paywallKey, setPaywallKey] = useState(0);
 
   const onboardingRef = useRef(null);
+
+  // Init RevenueCat and bypass paywall if already subscribed
+  useEffect(() => {
+    initPurchases().then(() =>
+      checkEntitlement().then(hasPremium => {
+        if (hasPremium) {
+          localStorage.setItem('unblur-paywall-seen', '1');
+          setShowPaywall(false);
+        }
+      })
+    );
+  }, []);
 
   const handleOnboardingDone = useCallback(() => {
     localStorage.setItem('unblur-onboarded', '1');

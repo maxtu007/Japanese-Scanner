@@ -3495,6 +3495,20 @@ rt {
   line-height: 1.5;
 }
 
+.pw-error {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  text-align: center;
+  z-index: 10;
+}
+
 /* ── Step 0: Phone mockup ── */
 .pw-phone-wrap {
   display: flex;
