@@ -17,6 +17,13 @@ export default function WordModal({ token, sentence, onClose, onRequestAdd, isAd
   const grammarLabel = token.grammarLabel ?? null;
   const localReading = toHiragana(token.reading);
 
+  // Lock background scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
