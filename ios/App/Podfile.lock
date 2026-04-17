@@ -4,11 +4,23 @@ PODS:
   - CapacitorCommunityInAppReview (8.0.0):
     - Capacitor
   - CapacitorCordova (8.3.0)
+  - PurchasesHybridCommon (18.0.0):
+    - RevenueCat (= 5.67.2)
+  - RevenueCat (5.67.2)
+  - RevenuecatPurchasesCapacitor (13.0.0):
+    - Capacitor
+    - PurchasesHybridCommon (= 18.0.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCommunityInAppReview (from `../../node_modules/@capacitor-community/in-app-review`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
+
+SPEC REPOS:
+  trunk:
+    - PurchasesHybridCommon
+    - RevenueCat
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -17,12 +29,17 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/in-app-review"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  RevenuecatPurchasesCapacitor:
+    :path: "../../node_modules/@revenuecat/purchases-capacitor"
 
 SPEC CHECKSUMS:
   Capacitor: 22e541237135648c9aa736232bb4d2eec35fddcb
   CapacitorCommunityInAppReview: 4492bdd34aad4d27ed87949376022cc93b294ea1
   CapacitorCordova: 2e1e2bb93b2f365309dc4ff18b72b9a69a7814a9
+  PurchasesHybridCommon: 5905e1b6e8a650e90ba7a27ee190df551a82db76
+  RevenueCat: 98177fc8a596e55a62b109c37e6d35f0132b4309
+  RevenuecatPurchasesCapacitor: 626dd9417edc7cb207e6bf69b5feefa7e22d74e0
 
-PODFILE CHECKSUM: a166275b03c54f79ab9d1e4c4a3260c621e8a4b7
+PODFILE CHECKSUM: acc54bebad1da060611ab81c6075c35aa4c1e701
 
 COCOAPODS: 1.16.2
