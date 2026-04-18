@@ -2409,6 +2409,67 @@ rt {
   padding: 0 2px;
 }
 
+.auth-social {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.auth-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.auth-social-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-apple-btn {
+  background: #000;
+  color: #fff;
+}
+
+.auth-google-btn {
+  background: #fff;
+  color: #3c4043;
+  border: 1.5px solid #dadce0;
+}
+
+.auth-social-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border, #e5e5e5);
+}
+
 .auth-submit-btn {
   background: var(--accent);
   color: #fff;

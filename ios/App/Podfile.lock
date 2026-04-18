@@ -1,6 +1,12 @@
 PODS:
   - Capacitor (8.3.0):
     - CapacitorCordova
+  - CapacitorApp (8.1.0):
+    - Capacitor
+  - CapacitorBrowser (8.0.3):
+    - Capacitor
+  - CapacitorCommunityAppleSignIn (7.1.0):
+    - Capacitor
   - CapacitorCommunityInAppReview (8.0.0):
     - Capacitor
   - CapacitorCordova (8.3.0)
@@ -13,6 +19,9 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
+  - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
   - "CapacitorCommunityInAppReview (from `../../node_modules/@capacitor-community/in-app-review`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
@@ -25,6 +34,12 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
+  CapacitorBrowser:
+    :path: "../../node_modules/@capacitor/browser"
+  CapacitorCommunityAppleSignIn:
+    :path: "../../node_modules/@capacitor-community/apple-sign-in"
   CapacitorCommunityInAppReview:
     :path: "../../node_modules/@capacitor-community/in-app-review"
   CapacitorCordova:
@@ -34,12 +49,15 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: 22e541237135648c9aa736232bb4d2eec35fddcb
+  CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
+  CapacitorBrowser: c987c73d09d8bd3b5ec13f06338b1e14d5d2be69
+  CapacitorCommunityAppleSignIn: 271cb2860576fd2961508bbfa7a82117d93eadca
   CapacitorCommunityInAppReview: 4492bdd34aad4d27ed87949376022cc93b294ea1
   CapacitorCordova: 2e1e2bb93b2f365309dc4ff18b72b9a69a7814a9
   PurchasesHybridCommon: 5905e1b6e8a650e90ba7a27ee190df551a82db76
   RevenueCat: 98177fc8a596e55a62b109c37e6d35f0132b4309
   RevenuecatPurchasesCapacitor: 626dd9417edc7cb207e6bf69b5feefa7e22d74e0
 
-PODFILE CHECKSUM: acc54bebad1da060611ab81c6075c35aa4c1e701
+PODFILE CHECKSUM: a45954d6fc0373e2ae460dc93e2cffdfe87f7a3a
 
 COCOAPODS: 1.16.2
