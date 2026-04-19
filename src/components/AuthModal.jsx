@@ -69,10 +69,10 @@ export default function AuthModal({ onClose }) {
     setLoading(true);
     try {
       await signInWithGoogle();
-      // session handled by appUrlOpen listener — don't close modal yet
     } catch (err) {
       if (!err.message?.toLowerCase().includes('cancel')) setError(err.message);
-      setLoading(false);
+    } finally {
+      setLoading(false); // reset immediately — session arrives via auth state change
     }
   }
 

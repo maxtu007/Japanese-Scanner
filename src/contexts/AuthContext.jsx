@@ -102,8 +102,6 @@ export function AuthProvider({ children }) {
   }
 
   async function signInWithGoogle() {
-    const { Browser } = await import('@capacitor/browser');
-
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -112,7 +110,8 @@ export function AuthProvider({ children }) {
       },
     });
     if (error) throw error;
-    await Browser.open({ url: data.url, windowName: '_self' });
+    // Use system Safari (not SFSafariViewController) so custom URL scheme redirect works
+    window.open(data.url, '_system');
   }
 
   return (
