@@ -11,7 +11,7 @@ function getTokenizer() {
 
   _building = new Promise((resolve, reject) => {
     kuromoji
-      .builder({ dicPath: 'https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict' })
+      .builder({ dicPath: '/dict' })
       .build((err, tokenizer) => {
         _building = null;
         if (err) {

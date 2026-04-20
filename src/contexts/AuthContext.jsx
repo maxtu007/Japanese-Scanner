@@ -5,9 +5,11 @@ import { supabase } from '../utils/supabase';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null);
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]           = useState(null);
+  const [session, setSession]     = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [oauthError, setOauthError] = useState(null);
+  const [oauthPending, setOauthPending] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -20,6 +22,10 @@ export function AuthProvider({ children }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session) {
+        setOauthPending(false);
+        setOauthError(null);
+      }
     });
 
     // Handle OAuth deep link callback (Google sign-in)
@@ -31,10 +37,17 @@ export function AuthProvider({ children }) {
       listenerHandle = await CapApp.addListener('appUrlOpen', async ({ url }) => {
         if (!url.startsWith('com.unblur.app://')) return;
         await Browser.close();
+        setOauthPending(true);
+        setOauthError(null);
         // PKCE flow: exchange code for session
         const code = new URLSearchParams(url.split('?')[1] || '').get('code');
         if (code) {
-          await supabase.auth.exchangeCodeForSession(url);
+          const { error } = await supabase.auth.exchangeCodeForSession(url);
+          if (error) {
+            console.error('[auth] exchangeCodeForSession failed:', error.message);
+            setOauthError(error.message);
+            setOauthPending(false);
+          }
           return;
         }
         // Implicit flow fallback: set session from hash tokens
@@ -42,8 +55,17 @@ export function AuthProvider({ children }) {
         const access_token = hash.get('access_token');
         const refresh_token = hash.get('refresh_token');
         if (access_token && refresh_token) {
-          await supabase.auth.setSession({ access_token, refresh_token });
+          const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+          if (error) {
+            console.error('[auth] setSession failed:', error.message);
+            setOauthError(error.message);
+            setOauthPending(false);
+          }
+          return;
         }
+        // URL received but no recognizable params
+        setOauthError('Sign-in failed — no auth code received. Please try again.');
+        setOauthPending(false);
       });
     }
     setupUrlListener();
@@ -74,6 +96,21 @@ export function AuthProvider({ children }) {
   async function resetPassword(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
+  }
+
+  async function deleteAccount() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Not signed in');
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+    const res = await fetch(`${API_BASE}/api/account`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'Failed to delete account');
+    // Sign out locally after server deletion
+    await supabase.auth.signOut();
   }
 
   async function signInWithApple() {
@@ -107,15 +144,19 @@ export function AuthProvider({ children }) {
       options: {
         redirectTo: 'com.unblur.app://login',
         skipBrowserRedirect: true,
+        queryParams: { prompt: 'select_account' },
       },
     });
     if (error) throw error;
-    // Use system Safari (not SFSafariViewController) so custom URL scheme redirect works
-    window.open(data.url, '_system');
+    setOauthError(null);
+    // Use Capacitor Browser (SFSafariViewController) — iOS fires appUrlOpen
+    // for custom URL scheme redirects from SFSafariViewController
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: data.url, presentationStyle: 'fullscreen' });
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, resetPassword, signInWithApple, signInWithGoogle, loading }}>
+    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, resetPassword, deleteAccount, signInWithApple, signInWithGoogle, loading, oauthError, oauthPending, setOauthError }}>
       {children}
     </AuthContext.Provider>
   );

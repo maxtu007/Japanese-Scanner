@@ -14,7 +14,7 @@ const PORT      = process.env.PORT || 3001;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 app.use(helmet());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.set('trust proxy', 1);
 
 app.use(cors({
@@ -26,7 +26,7 @@ app.use(cors({
       ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
       : []),
   ],
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'DELETE'],
 }));
 
 // ── Supabase admin client (service role — JWT verification) ──────────────────
@@ -293,6 +293,31 @@ app.get('/api/lookup', async (req, res) => {
   } catch (err) {
     console.error(`[lookup] error  "${word}": ${err.message}`);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Account deletion ──────────────────────────────────────────────────────────
+app.delete('/api/account', requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    // Delete user data before removing auth record
+    await supabaseAdmin.from('saved_words').delete().eq('user_id', userId);
+    await supabaseAdmin.from('scan_history').delete().eq('user_id', userId);
+    // deck_cards will cascade if FK is set; delete decks (cards first to be safe)
+    const { data: decks } = await supabaseAdmin.from('decks').select('id').eq('user_id', userId);
+    if (decks?.length) {
+      const deckIds = decks.map(d => d.id);
+      await supabaseAdmin.from('deck_cards').delete().in('deck_id', deckIds);
+    }
+    await supabaseAdmin.from('decks').delete().eq('user_id', userId);
+    await supabaseAdmin.from('scan_folders').delete().eq('user_id', userId);
+    // Delete auth user (this invalidates all sessions)
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[delete-account]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

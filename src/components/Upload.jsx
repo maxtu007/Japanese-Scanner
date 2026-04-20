@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 
-const MAX_BYTES = 5 * 1024 * 1024;
-const ACCEPT = ['image/png', 'image/jpeg'];
+const MAX_BYTES = 20 * 1024 * 1024; // iOS camera photos can be large
 
 export default function Upload({ onFile }) {
   const [dragOver, setDragOver] = useState(false);
@@ -9,8 +8,8 @@ export default function Upload({ onFile }) {
   const inputRef = useRef(null);
 
   function validate(file) {
-    if (!ACCEPT.includes(file.type)) return 'Please upload a PNG or JPG image.';
-    if (file.size > MAX_BYTES) return 'Image must be under 5 MB.';
+    if (!file.type.startsWith('image/')) return 'Please select an image.';
+    if (file.size > MAX_BYTES) return 'Image must be under 20 MB.';
     return null;
   }
 
@@ -68,7 +67,7 @@ export default function Upload({ onFile }) {
         <input
           ref={inputRef}
           type="file"
-          accept=".png,.jpg,.jpeg"
+          accept="image/*"
           onChange={onInputChange}
           style={{ display: 'none' }}
         />

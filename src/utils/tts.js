@@ -1,105 +1,145 @@
-// Web Speech API wrapper for Japanese TTS
+// TTS — uses native AVSpeechSynthesizer via Capacitor plugin on iOS,
+// falls back to Web Speech API on desktop/web.
+// window.speechSynthesis routes through the accessibility system in WKWebView
+// and produces no audio — the native plugin is required for iOS.
 
-let _sentences = [];
-let _idx = 0;
-let _onProgress = null;
-let _onEnd = null;
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
+
+const IS_NATIVE = Capacitor.isNativePlatform();
+
+// ── State ─────────────────────────────────────────────────────────────────────
 let _active = false;
-let _onInterrupt = null; // called when speakOne() interrupts an active speakAll
+let _cancelFlag = { cancelled: false }; // object so inner async loops can see mutations
+let _idx = 0;
+let _onInterrupt = null;
 
-function _speak() {
-  if (!_active || _idx >= _sentences.length) {
+// ── Native (iOS) sequential speaker ──────────────────────────────────────────
+async function _speakNative(sentences, startIdx, { onProgress, onEnd } = {}) {
+  const flag = _cancelFlag;
+  _idx = startIdx;
+
+  for (let i = startIdx; i < sentences.length; i++) {
+    if (flag.cancelled) break;
+    _idx = i;
+    try {
+      await TextToSpeech.speak({
+        text:     sentences[i],
+        lang:     'ja-JP',
+        rate:     0.9,
+        pitch:    1.0,
+        volume:   1.0,
+        category: 'playback',
+      });
+    } catch (_) {
+      // interrupted by stop() — exit loop cleanly
+      break;
+    }
+    if (flag.cancelled) break;
+    _idx = i + 1;
+    onProgress?.(_idx / sentences.length);
+  }
+
+  if (!flag.cancelled) {
     _active = false;
-    _onEnd?.();
+    onEnd?.();
+  }
+}
+
+// ── Web Speech API fallback (desktop) ─────────────────────────────────────────
+let _webSentences = [];
+let _webOnProgress = null;
+let _webOnEnd = null;
+
+function _webSpeak() {
+  if (!_active || _idx >= _webSentences.length) {
+    _active = false;
+    _webOnEnd?.();
     return;
   }
 
-  const u = new SpeechSynthesisUtterance(_sentences[_idx]);
+  const u = new SpeechSynthesisUtterance(_webSentences[_idx]);
   u.lang = 'ja-JP';
   u.rate = 0.9;
 
   u.onend = () => {
     _idx++;
-    _onProgress?.(_idx / _sentences.length);
-    _speak();
+    _webOnProgress?.(_idx / _webSentences.length);
+    _webSpeak();
   };
 
   u.onerror = (e) => {
     if (e.error === 'interrupted' || e.error === 'canceled') return;
     _idx++;
-    _speak();
+    _webSpeak();
   };
 
   window.speechSynthesis.speak(u);
 }
 
-/**
- * Speak an array of sentences end-to-end.
- * onProgress(ratio) fires after each sentence completes.
- * onEnd() fires when all sentences finish.
- */
-export function speakAll(sentences, { onProgress, onEnd } = {}) {
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export function speakFrom(sentences, startIdx, { onProgress, onEnd } = {}) {
   _cancelInternal();
-  _sentences = sentences.filter(s => s.trim().length > 0);
-  _idx = 0;
-  _onProgress = onProgress ?? null;
-  _onEnd = onEnd ?? null;
+
+  const filtered = sentences.filter(s => s.trim().length > 0);
+  if (!filtered.length) { onEnd?.(); return; }
+
   _active = true;
-  _speak();
+  _idx = Math.max(0, Math.min(startIdx, filtered.length - 1));
+
+  if (IS_NATIVE) {
+    _cancelFlag = { cancelled: false };
+    _speakNative(filtered, _idx, { onProgress, onEnd });
+  } else {
+    _webSentences = filtered;
+    _webOnProgress = onProgress ?? null;
+    _webOnEnd = onEnd ?? null;
+    _webSpeak();
+  }
 }
 
-/**
- * Resume (or start) playback from a specific sentence index.
- * Use this after a pause so the progress bar continues from where it left off.
- */
-export function speakFrom(sentences, idx, { onProgress, onEnd } = {}) {
-  _cancelInternal();
-  _sentences = sentences.filter(s => s.trim().length > 0);
-  _idx = Math.max(0, Math.min(idx, _sentences.length - 1));
-  _onProgress = onProgress ?? null;
-  _onEnd = onEnd ?? null;
-  _active = true;
-  _speak();
-}
-
-/** Speak a single word / phrase. Pauses (not stops) any active speakAll. */
 export function speakOne(text) {
   if (_active) {
-    // Notify AudioBar to enter paused state (keeps progress + elapsed)
     _active = false;
-    _onProgress = null;
-    _onEnd = null;
+    _cancelFlag.cancelled = true;
+    _webOnProgress = null;
+    _webOnEnd = null;
     _onInterrupt?.();
   }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ja-JP';
-  u.rate = 0.85;
-  window.speechSynthesis.speak(u);
+
+  if (IS_NATIVE) {
+    TextToSpeech.stop().catch(() => {});
+    TextToSpeech.speak({ text, lang: 'ja-JP', rate: 0.85, pitch: 1.0, volume: 1.0, category: 'playback' }).catch(() => {});
+  } else {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP';
+    u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  }
 }
 
-/** Cancel all speech and clear state. Does NOT reset _idx — call getResumeIdx() before this if needed. */
 export function cancel() {
   _cancelInternal();
 }
 
-/** Returns the index of the next sentence to speak (useful for saving resume position). */
 export function getResumeIdx() {
   return _idx;
 }
 
-/**
- * Register a callback that fires when speakOne() interrupts an active speakAll.
- * AudioBar uses this to switch to paused state without resetting progress.
- */
 export function setInterruptListener(fn) {
   _onInterrupt = fn;
 }
 
-// Internal cancel — does not fire _onInterrupt
 function _cancelInternal() {
   _active = false;
-  _onProgress = null;
-  _onEnd = null;
-  window.speechSynthesis.cancel();
+  _cancelFlag.cancelled = true;
+  _webOnProgress = null;
+  _webOnEnd = null;
+  if (IS_NATIVE) {
+    TextToSpeech.stop().catch(() => {});
+  } else {
+    window.speechSynthesis.cancel();
+  }
 }

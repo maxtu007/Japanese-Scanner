@@ -42,15 +42,38 @@ async function generateThumbnail(objectURL) {
 
 
 export default function App() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
 
   const [showAuth, setShowAuth] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Close auth modal when user becomes authenticated (e.g. after Google/Apple OAuth)
+  useEffect(() => {
+    if (user && showAuth) setShowAuth(false);
+  }, [user, showAuth]);
+
+  async function handleDeleteAccount() {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('unblur-onboarded')
   );
   const [showPaywall, setShowPaywall] = useState(
-    () => !localStorage.getItem('unblur-paywall-seen')
+    () => false // DEV BYPASS — restore to: !localStorage.getItem('unblur-paywall-seen')
   );
   const [paywallKey, setPaywallKey] = useState(0);
 
@@ -113,6 +136,14 @@ export default function App() {
     setImageSrc(src);
     setPhase('processing');
     setError(null);
+
+    // Safety timeout — never hang forever on iOS
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      setError('Scan timed out. Please try again.');
+      setPhase('upload');
+    }, 60000);
 
     try {
       const t0 = performance.now();
@@ -207,10 +238,14 @@ export default function App() {
         }
       }
 
-      setPhase('results');
+      if (!timedOut) setPhase('results');
     } catch (err) {
-      setError(err.message || 'Processing failed. Please try again.');
-      setPhase('upload');
+      if (!timedOut) {
+        setError(err.message || 'Processing failed. Please try again.');
+        setPhase('upload');
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -403,7 +438,7 @@ export default function App() {
                     )}
                     <button
                       className={`acct-row${user ? ' acct-row-danger' : ''}`}
-                      onClick={user ? signOut : () => setShowAuth(true)}
+                      onClick={user ? () => setShowSignOutConfirm(true) : () => setShowAuth(true)}
                     >
                       <span className="acct-row-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -411,6 +446,18 @@ export default function App() {
                       <span className="acct-row-text">{user ? 'Sign Out' : 'Sign In / Sign Up'}</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
+                    {user && (
+                      <>
+                        <div className="acct-divider"/>
+                        <button className="acct-row acct-row-danger" onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}>
+                          <span className="acct-row-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </span>
+                          <span className="acct-row-text">Delete Account</span>
+                          <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {/* Support */}
@@ -434,9 +481,9 @@ export default function App() {
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={() => setShowAbout(true)}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2.5" strokeLinecap="round"/></svg></span>
-                      <span className="acct-row-text">About Us</span>
+                      <span className="acct-row-text">About</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
@@ -468,6 +515,7 @@ export default function App() {
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                   </div>
+
                 </div>
               )}
             </div>
@@ -562,6 +610,51 @@ export default function App() {
 
       {showAuth && (
         <AuthModal onClose={() => setShowAuth(false)} />
+      )}
+
+      {/* About modal */}
+      {showAbout && (
+        <div className="confirm-overlay" onClick={() => setShowAbout(false)}>
+          <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+            <div className="wordmark" style={{textAlign:'center',fontSize:'28px',marginBottom:'2px'}}>Un<em>blur</em></div>
+            <p style={{textAlign:'center',fontSize:'12px',color:'var(--muted)',margin:'0 0 16px'}}>Version 1.0.0</p>
+            <p style={{fontSize:'13px',color:'var(--muted)',lineHeight:'1.6',margin:'0 0 20px',textAlign:'center'}}>
+              Unblur uses AI to help you read Japanese — OCR by Google Cloud Vision, translations by Claude (Anthropic), and word explanations by Gemini (Google). AI results may not always be accurate.
+            </p>
+            <button className="confirm-btn confirm-btn-cancel" onClick={() => setShowAbout(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Sign Out confirmation */}
+      {showSignOutConfirm && (
+        <div className="confirm-overlay" onClick={() => setShowSignOutConfirm(false)}>
+          <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+            <p className="confirm-title">Sign Out</p>
+            <p className="confirm-msg">Are you sure you want to sign out?</p>
+            <div className="confirm-actions">
+              <button className="confirm-btn confirm-btn-cancel" onClick={() => setShowSignOutConfirm(false)}>Cancel</button>
+              <button className="confirm-btn confirm-btn-danger" onClick={() => { signOut(); setShowSignOutConfirm(false); }}>Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account confirmation */}
+      {showDeleteConfirm && (
+        <div className="confirm-overlay" onClick={() => !deleteLoading && setShowDeleteConfirm(false)}>
+          <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+            <p className="confirm-title">Delete Account</p>
+            <p className="confirm-msg">This will permanently delete your account and all saved words, decks, and scan history. This cannot be undone.</p>
+            {deleteError && <p className="confirm-error">{deleteError}</p>}
+            <div className="confirm-actions">
+              <button className="confirm-btn confirm-btn-cancel" onClick={() => setShowDeleteConfirm(false)} disabled={deleteLoading}>Cancel</button>
+              <button className="confirm-btn confirm-btn-danger" onClick={handleDeleteAccount} disabled={deleteLoading}>
+                {deleteLoading ? 'Deleting…' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {pendingFlashcard && (

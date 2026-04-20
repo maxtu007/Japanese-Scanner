@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'UnBlur',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
   },
 };
 

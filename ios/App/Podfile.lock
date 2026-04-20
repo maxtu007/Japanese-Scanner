@@ -9,6 +9,8 @@ PODS:
     - Capacitor
   - CapacitorCommunityInAppReview (8.0.0):
     - Capacitor
+  - CapacitorCommunityTextToSpeech (8.0.0):
+    - Capacitor
   - CapacitorCordova (8.3.0)
   - PurchasesHybridCommon (18.0.0):
     - RevenueCat (= 5.67.2)
@@ -23,6 +25,7 @@ DEPENDENCIES:
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
   - "CapacitorCommunityInAppReview (from `../../node_modules/@capacitor-community/in-app-review`)"
+  - "CapacitorCommunityTextToSpeech (from `../../node_modules/@capacitor-community/text-to-speech`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
 
@@ -42,6 +45,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/apple-sign-in"
   CapacitorCommunityInAppReview:
     :path: "../../node_modules/@capacitor-community/in-app-review"
+  CapacitorCommunityTextToSpeech:
+    :path: "../../node_modules/@capacitor-community/text-to-speech"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   RevenuecatPurchasesCapacitor:
@@ -53,11 +58,12 @@ SPEC CHECKSUMS:
   CapacitorBrowser: c987c73d09d8bd3b5ec13f06338b1e14d5d2be69
   CapacitorCommunityAppleSignIn: 271cb2860576fd2961508bbfa7a82117d93eadca
   CapacitorCommunityInAppReview: 4492bdd34aad4d27ed87949376022cc93b294ea1
+  CapacitorCommunityTextToSpeech: 43cd3c04174f38b8766f160830ee474cd5596439
   CapacitorCordova: 2e1e2bb93b2f365309dc4ff18b72b9a69a7814a9
   PurchasesHybridCommon: 5905e1b6e8a650e90ba7a27ee190df551a82db76
   RevenueCat: 98177fc8a596e55a62b109c37e6d35f0132b4309
   RevenuecatPurchasesCapacitor: 626dd9417edc7cb207e6bf69b5feefa7e22d74e0
 
-PODFILE CHECKSUM: a45954d6fc0373e2ae460dc93e2cffdfe87f7a3a
+PODFILE CHECKSUM: 1879e70674f3ba1dfe9c97c6acb6aef8fbaf0855
 
 COCOAPODS: 1.16.2

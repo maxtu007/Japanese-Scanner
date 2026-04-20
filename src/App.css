@@ -48,10 +48,11 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: #fff;
+  padding-top: env(safe-area-inset-top);
 }
 
 .home-header {
-  padding: 32px 28px 0;
+  padding: 16px 28px 0;
 }
 
 .wordmark {
@@ -189,7 +190,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   align-items: center;
-  padding: 10px 4px 28px;
+  padding: 10px 4px calc(10px + env(safe-area-inset-bottom));
   background: var(--accent);
 }
 
@@ -408,6 +409,90 @@ body {
 .acct-row-danger .acct-row-icon { background: var(--error-bg); }
 .acct-row-danger .acct-row-icon svg { stroke: var(--error-text); }
 .acct-row-danger .acct-row-text { color: var(--error-text); }
+
+.acct-ai-disclosure {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  padding: 0 24px 24px;
+  line-height: 1.5;
+}
+
+/* ── Confirmation sheet ───────────────────────────────────────────────────── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1100;
+  animation: auth-fade-in 0.15s ease;
+}
+
+.confirm-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 24px calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: auth-slide-up 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.confirm-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  text-align: center;
+}
+
+.confirm-msg {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.confirm-error {
+  font-size: 13px;
+  color: var(--error-text, #e05);
+  text-align: center;
+  margin: 0;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.confirm-btn {
+  flex: 1;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.confirm-btn:disabled { opacity: 0.5; cursor: default; }
+
+.confirm-btn-cancel {
+  background: var(--surface, #f0f0f5);
+  color: var(--text);
+}
+
+.confirm-btn-danger {
+  background: #e53e3e;
+  color: #fff;
+}
 
 .acct-divider {
   height: 1px;
@@ -2277,12 +2362,14 @@ rt {
 .auth-sheet {
   width: 100%;
   max-width: 480px;
+  max-height: calc(100dvh - env(safe-area-inset-top) - 20px);
+  overflow-y: auto;
   background: var(--bg);
   border-radius: 24px 24px 0 0;
-  padding: 36px 28px 48px;
+  padding: 20px 28px calc(12px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 14px;
   position: relative;
   animation: auth-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -2312,17 +2399,17 @@ rt {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding-top: 8px;
+  gap: 4px;
+  padding-top: 4px;
 }
 
 .auth-wordmark {
   text-align: center;
-  font-size: 36px;
+  font-size: 28px;
 }
 
 .auth-tagline {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
   text-align: center;
   margin: 0;
@@ -2362,7 +2449,7 @@ rt {
 .auth-input {
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 13px 14px;
+  padding: 11px 14px;
   font-family: inherit;
   font-size: 15px;
   color: var(--text);
@@ -2427,7 +2514,7 @@ rt {
   gap: 10px;
   border: none;
   border-radius: 10px;
-  padding: 13px;
+  padding: 11px;
   font-family: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -2479,12 +2566,12 @@ rt {
   color: #fff;
   border: none;
   border-radius: 10px;
-  padding: 14px;
+  padding: 12px;
   font-family: inherit;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 4px;
+  margin-top: 2px;
   transition: opacity 0.15s;
 }
 

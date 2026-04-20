@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthModal({ onClose }) {
-  const { signIn, signUp, resetPassword, signInWithApple, signInWithGoogle } = useAuth();
+  const { signIn, signUp, resetPassword, signInWithApple, signInWithGoogle, oauthError, oauthPending, setOauthError } = useAuth();
   const [tab, setTab]               = useState('login');
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
@@ -12,6 +12,7 @@ export default function AuthModal({ onClose }) {
   const [loading, setLoading]       = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [signUpEmailSent, setSignUpEmailSent] = useState(false);
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -26,10 +27,16 @@ export default function AuthModal({ onClose }) {
     try {
       if (tab === 'login') {
         await signIn(email, password);
+        onClose?.();
       } else {
-        await signUp(email, password);
+        const data = await signUp(email, password);
+        // If email confirmation is required, user.email_confirmed_at will be null
+        if (data?.user && !data.user.email_confirmed_at) {
+          setSignUpEmailSent(true);
+        } else {
+          onClose?.();
+        }
       }
-      onClose?.();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -66,6 +73,7 @@ export default function AuthModal({ onClose }) {
 
   async function handleGoogle() {
     setError(null);
+    setOauthError(null);
     setLoading(true);
     try {
       await signInWithGoogle();
@@ -119,78 +127,95 @@ export default function AuthModal({ onClose }) {
 
         {isNative && <div className="auth-divider"><span>or</span></div>}
 
-        <div className="auth-tabs">
-          <button className={`auth-tab${tab === 'login' ? ' active' : ''}`} onClick={() => switchTab('login')}>Log In</button>
-          <button className={`auth-tab${tab === 'signup' ? ' active' : ''}`} onClick={() => switchTab('signup')}>Sign Up</button>
-        </div>
-
-        {showForgot ? (
-          <form className="auth-form" onSubmit={handleForgot}>
-            <p className="auth-forgot-hint">Enter your email and we'll send a reset link.</p>
-            <input
-              className="auth-input"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            {error && <p className="auth-error">{error}</p>}
-            {forgotSent
-              ? <p className="auth-success">Check your email for a reset link.</p>
-              : <button className="auth-submit-btn" type="submit" disabled={loading}>{loading ? 'Sending…' : 'Send Reset Link'}</button>
-            }
-            <button type="button" className="auth-link-btn" onClick={() => { setShowForgot(false); setForgotSent(false); setError(null); }}>
-              Back to log in
-            </button>
-          </form>
-        ) : (
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <input
-              className="auth-input"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            <div className="auth-password-wrap">
-              <input
-                className="auth-input"
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-                minLength={6}
-              />
-              {tab === 'login' && (
-                <button type="button" className="auth-forgot-link" onClick={() => { setShowForgot(true); setError(null); }}>
-                  Forgot password?
-                </button>
-              )}
-            </div>
-            {tab === 'signup' && (
-              <input
-                className="auth-input"
-                type="password"
-                placeholder="Confirm Password"
-                value={confirmPass}
-                onChange={e => setConfirmPass(e.target.value)}
-                required
-                autoComplete="new-password"
-                minLength={6}
-              />
-            )}
-            {error && <p className="auth-error">{error}</p>}
-            <button className="auth-submit-btn" type="submit" disabled={loading}>
-              {loading ? 'Please wait…' : tab === 'login' ? 'Log In' : 'Create Account'}
-            </button>
-          </form>
+        {oauthPending && (
+          <p className="auth-success" style={{textAlign:'center'}}>Signing you in…</p>
         )}
+        {oauthError && (
+          <p className="auth-error" style={{textAlign:'center'}}>{oauthError}</p>
+        )}
+
+        {signUpEmailSent ? (
+          <div style={{textAlign:'center',padding:'16px 0'}}>
+            <p className="auth-success" style={{fontSize:'15px',marginBottom:'8px'}}>Account created!</p>
+            <p className="auth-tagline">Check your email to confirm your address, then log in.</p>
+            <button type="button" className="auth-link-btn" style={{marginTop:'12px'}} onClick={() => { setSignUpEmailSent(false); setTab('login'); }}>
+              Go to Log In
+            </button>
+          </div>
+        ) : (<>
+          <div className="auth-tabs">
+            <button className={`auth-tab${tab === 'login' ? ' active' : ''}`} onClick={() => switchTab('login')}>Log In</button>
+            <button className={`auth-tab${tab === 'signup' ? ' active' : ''}`} onClick={() => switchTab('signup')}>Sign Up</button>
+          </div>
+
+          {showForgot ? (
+            <form className="auth-form" onSubmit={handleForgot}>
+              <p className="auth-forgot-hint">Enter your email and we'll send a reset link.</p>
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+              {error && <p className="auth-error">{error}</p>}
+              {forgotSent
+                ? <p className="auth-success">Check your email for a reset link.</p>
+                : <button className="auth-submit-btn" type="submit" disabled={loading}>{loading ? 'Sending…' : 'Send Reset Link'}</button>
+              }
+              <button type="button" className="auth-link-btn" onClick={() => { setShowForgot(false); setForgotSent(false); setError(null); }}>
+                Back to log in
+              </button>
+            </form>
+          ) : (
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+              <div className="auth-password-wrap">
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                  minLength={6}
+                />
+                {tab === 'login' && (
+                  <button type="button" className="auth-forgot-link" onClick={() => { setShowForgot(true); setError(null); }}>
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+              {tab === 'signup' && (
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={confirmPass}
+                  onChange={e => setConfirmPass(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  minLength={6}
+                />
+              )}
+              {error && <p className="auth-error">{error}</p>}
+              <button className="auth-submit-btn" type="submit" disabled={loading}>
+                {loading ? 'Please wait…' : tab === 'login' ? 'Log In' : 'Create Account'}
+              </button>
+            </form>
+          )}
+        </>)}
       </div>
     </div>
   );
