@@ -679,12 +679,26 @@ rt {
   white-space: nowrap;
 }
 
-rt.rt-romaji {
+/* Romaji annotation: absolutely positioned so it doesn't affect token width in flow */
+.token-romaji {
+  display: inline-block;
+  position: relative;
+  vertical-align: bottom;
+}
+
+.romaji-rt {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
   color: var(--accent);
   opacity: 0.8;
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  margin-bottom: 1px;
 }
 
 /* Plain token (no annotations) */

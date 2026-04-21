@@ -22,13 +22,15 @@ function WordToken({ token, sentence, showFurigana, showRomaji, onClick }) {
     );
   }
 
-  // Romaji mode: same <ruby>/<rt> approach as furigana — keeps native line spacing
+  // Romaji mode: absolute-positioned annotation so it doesn't affect token width in flow
+  // Using <ruby> caused the box to expand to max(kanji,romaji) width, making justify
+  // recalculate spacing on every touch interaction.
   if (showRomaji && reading) {
     return (
-      <ruby className="token" onClick={() => onClick(token, sentence)}>
+      <span className="token token-romaji" onClick={() => onClick(token, sentence)}>
+        <span className="romaji-rt">{toRomaji(reading)}</span>
         {surface}
-        <rt className="rt-romaji">{toRomaji(reading)}</rt>
-      </ruby>
+      </span>
     );
   }
 
