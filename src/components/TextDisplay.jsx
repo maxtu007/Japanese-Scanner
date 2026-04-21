@@ -1,9 +1,9 @@
-import { toHiragana } from '../utils/japanese';
+import { toHiragana, toRomaji } from '../utils/japanese';
 
 const KANJI = /[\u4E00-\u9FFF\u3400-\u4DBF]/;
 const PUNCT_RE = /^[\s。、！？…「」『』【】（）〔〕・～—\-\/]+$/;
 
-function WordToken({ token, sentence, showFurigana, onClick }) {
+function WordToken({ token, sentence, showFurigana, showRomaji, onClick }) {
   const surface = token.surface_form;
 
   if (PUNCT_RE.test(surface) || token.pos === '記号') {
@@ -11,13 +11,23 @@ function WordToken({ token, sentence, showFurigana, onClick }) {
   }
 
   const reading = toHiragana(token.reading);
-  const showRuby = showFurigana && KANJI.test(surface) && reading && reading !== surface;
 
-  if (showRuby) {
+  // Furigana mode: native <ruby> — exactly as before romaji was added
+  if (showFurigana && reading && KANJI.test(surface) && reading !== surface) {
     return (
       <ruby className="token" onClick={() => onClick(token, sentence)}>
         {surface}
         <rt>{reading}</rt>
+      </ruby>
+    );
+  }
+
+  // Romaji mode: same <ruby>/<rt> approach as furigana — keeps native line spacing
+  if (showRomaji && reading) {
+    return (
+      <ruby className="token" onClick={() => onClick(token, sentence)}>
+        {surface}
+        <rt className="rt-romaji">{toRomaji(reading)}</rt>
       </ruby>
     );
   }
@@ -29,7 +39,7 @@ function WordToken({ token, sentence, showFurigana, onClick }) {
   );
 }
 
-export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations, showFurigana }) {
+export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations, showFurigana, showRomaji }) {
   return (
     <div className="text-display">
       {tokenBlocks.map((block, bi) => (
@@ -44,6 +54,7 @@ export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations
                       token={token}
                       sentence={sent}
                       showFurigana={showFurigana}
+                      showRomaji={showRomaji}
                       onClick={onWordClick}
                     />
                   ))}

@@ -662,28 +662,91 @@ body {
   display: block;
   text-align: justify;
   text-justify: inter-character;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 ruby {
   ruby-align: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
 rt {
   font-size: 11px;
   color: var(--muted);
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
+rt.rt-romaji {
+  font-size: 10px;
+  color: var(--accent);
+  opacity: 0.8;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Plain token (no annotations) */
 .token {
   cursor: pointer;
   border-radius: 3px;
   padding: 0 2px;
   transition: background 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .token:hover {
   background: var(--accent-light);
   color: var(--accent);
+}
+
+/* Token with furigana/romaji annotations stacked above */
+.token-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: baseline;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background 0.1s;
+}
+
+.token-wrap:hover {
+  background: var(--accent-light);
+}
+
+.token-wrap:hover .token-base {
+  color: var(--accent);
+}
+
+.token-annotations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+  margin-bottom: 1px;
+}
+
+.rt-furigana {
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.rt-romaji {
+  font-size: 13px;
+  color: var(--accent);
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+}
+
+.token-base {
+  transition: color 0.1s;
 }
 
 .punct {
@@ -757,8 +820,8 @@ rt {
 .bottom-pills-row {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 20px 28px;
+  gap: 8px;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Speaker button (word modal + flashcard back) ── */
@@ -807,10 +870,12 @@ rt {
 .speak-btn-card:hover svg { stroke: var(--accent); }
 
 .bar-pill {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 10px 22px;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
   border-radius: 99px;
   border: 1.5px solid var(--border);
   background: #fff;

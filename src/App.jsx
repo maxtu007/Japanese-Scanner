@@ -16,27 +16,35 @@ import { reconstructLayout } from './utils/layoutReconstructor';
 import { extractTextWithGoogle } from './utils/googleVision';
 import { tokenizeSentence, hasJapanese } from './utils/japanese';
 import { loadDecks } from './utils/supabaseDecks';
-import { addScan } from './utils/supabaseHistory';
+import { addScan, loadHistory } from './utils/supabaseHistory';
 import { migrateLocalStorageToSupabase } from './utils/migrate';
 import { initPurchases, checkEntitlement } from './utils/purchases';
 
-async function generateThumbnail(objectURL) {
+async function generateThumbnail(file) {
+  // Use FileReader to get a data URL from the File directly.
+  // Drawing a blob URL onto canvas in WKWebView taints the canvas and
+  // silently blocks toDataURL() — FileReader avoids this restriction.
   return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 110;
-      const ratio = img.width / img.height;
-      const [w, h] = ratio > 1
-        ? [MAX, Math.round(MAX / ratio)]
-        : [Math.round(MAX * ratio), MAX];
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.6));
+    const reader = new FileReader();
+    reader.onerror = () => resolve('');
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => resolve('');
+      img.onload = () => {
+        const MAX = 400;
+        const ratio = img.width / img.height;
+        const [w, h] = ratio > 1
+          ? [MAX, Math.round(MAX / ratio)]
+          : [Math.round(MAX * ratio), MAX];
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = e.target.result;
     };
-    img.onerror = () => resolve('');
-    img.src = objectURL;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -109,11 +117,15 @@ export default function App() {
   const [selectedToken, setSelectedToken] = useState(null);
   const [showTranslations, setShowTranslations] = useState(false);
   const [showFurigana, setShowFurigana] = useState(true);
+  const [showRomaji, setShowRomaji] = useState(false);
   const [error, setError] = useState(null);
 
   // Flashcard state
   const [decks, setDecks] = useState([]);
   const [pendingFlashcard, setPendingFlashcard] = useState(null);
+
+  // History state — loaded once on login so the History tab renders instantly
+  const [history, setHistory] = useState({ folders: [] });
 
   // Stable sentence strings for AudioBar
   const sentenceTexts = useMemo(
@@ -121,13 +133,17 @@ export default function App() {
     [tokenBlocks]
   );
 
-  // Load decks and run migration once user is authenticated
+  // Load decks + history once user is authenticated (or on dev without auth)
   useEffect(() => {
-    if (!user) return;
+    if (!user && !import.meta.env.DEV) return;
     (async () => {
-      await migrateLocalStorageToSupabase();
-      const decksData = await loadDecks();
+      if (user) await migrateLocalStorageToSupabase();
+      const [decksData, historyData] = await Promise.all([
+        user ? loadDecks() : Promise.resolve([]),
+        loadHistory(),
+      ]);
       setDecks(decksData);
+      setHistory(historyData);
     })();
   }, [user]);
 
@@ -217,25 +233,47 @@ export default function App() {
       setTokenBlocks(pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : []);
       setShowTranslations(false);
 
-      // Save to history (Supabase) — only when authenticated
-      if (user) {
-        try {
-          const thumbnail = src ? await generateThumbnail(src) : '';
-          const japanesePreview = pairedSentences
-            .slice(0, 5)
-            .map(s => s.tokens.map(t => t.surface_form).join(''))
-            .join('');
-          const titleText = japanesePreview.slice(0, 28) || '(Scan)';
-          await addScan({
+      // Save to history
+      try {
+        const thumbnail = await generateThumbnail(file);
+        const japanesePreview = pairedSentences
+          .slice(0, 5)
+          .map(s => s.tokens.map(t => t.surface_form).join(''))
+          .join('');
+        const titleText = japanesePreview.slice(0, 28) || '(Scan)';
+        if (user) {
+          // Authenticated: persist to Supabase
+          const updatedHistory = await addScan({
             name: titleText,
             thumbnail,
             japanese: japanesePreview,
             translation: pairedSentences[0]?.translation ?? '',
             tokenBlocks: pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : [],
           });
-        } catch (e) {
-          console.error('[history] Failed to save scan:', e);
+          if (updatedHistory) setHistory(updatedHistory);
+        } else if (import.meta.env.DEV) {
+          // DEV without auth: store scan in local state only (no Supabase)
+          const devScan = {
+            id: crypto.randomUUID(),
+            name: titleText,
+            thumbnail,
+            japanese: japanesePreview,
+            translation: pairedSentences[0]?.translation ?? '',
+            tokenBlocks: pairedSentences.length > 0 ? [{ sentences: pairedSentences }] : [],
+            createdAt: new Date().toISOString(),
+            folderId: 'dev',
+          };
+          setHistory(prev => {
+            const devFolder = prev.folders.find(f => f.id === 'dev') ?? {
+              id: 'dev', name: 'Default Folder', isDefault: true, scans: [],
+            };
+            const updatedFolder = { ...devFolder, scans: [devScan, ...devFolder.scans] };
+            const otherFolders = prev.folders.filter(f => f.id !== 'dev');
+            return { folders: [updatedFolder, ...otherFolders] };
+          });
         }
+      } catch (e) {
+        console.error('[history] Failed to save scan:', e);
       }
 
       if (!timedOut) setPhase('results');
@@ -377,7 +415,7 @@ export default function App() {
                   <Upload onFile={handleFile} />
                 </>
               ) : activeTab === 'history' ? (
-                <HistoryTab onOpenScan={handleOpenScan} />
+                <HistoryTab history={history} onHistoryChange={setHistory} onOpenScan={handleOpenScan} />
               ) : activeTab === 'flashcards' ? (
                 <FlashcardsTab
                   decks={decks}
@@ -586,6 +624,7 @@ export default function App() {
               onWordClick={(token, sentence) => setSelectedToken({ token, sentence })}
               showTranslations={showTranslations}
               showFurigana={showFurigana}
+              showRomaji={showRomaji}
             />
           </div>
         )}
@@ -679,10 +718,17 @@ export default function App() {
             </button>
             <button
               className={`bar-pill${showFurigana ? ' active' : ''}`}
-              onClick={() => setShowFurigana(v => !v)}
+              onClick={() => { const next = !showFurigana; setShowFurigana(next); if (next) setShowRomaji(false); }}
             >
               <span className="bar-pill-icon">ふ</span>
               Furigana
+            </button>
+            <button
+              className={`bar-pill${showRomaji ? ' active' : ''}`}
+              onClick={() => { const next = !showRomaji; setShowRomaji(next); if (next) setShowFurigana(false); }}
+            >
+              <span className="bar-pill-icon">A</span>
+              Romaji
             </button>
           </div>
         </div>

@@ -4,15 +4,24 @@ const BUCKET = 'scan-thumbnails';
 
 // ── Thumbnail helpers ─────────────────────────────────────────────────────────
 
+function dataUrlToBlob(dataUrl) {
+  const [header, b64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 async function uploadThumbnail(userId, scanId, base64DataUrl) {
   if (!base64DataUrl) return '';
   try {
-    const res  = await fetch(base64DataUrl);
-    const blob = await res.blob();
+    // atob conversion — fetch('data:...') is blocked in WKWebView on iOS
+    const blob = dataUrlToBlob(base64DataUrl);
     const path = `${userId}/${scanId}.jpg`;
     const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
       contentType: 'image/jpeg',
-      upsert:      true,
+      upsert: true,
     });
     if (error) { console.error('[history] thumbnail upload:', error); return ''; }
     return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
@@ -25,9 +34,8 @@ async function uploadThumbnail(userId, scanId, base64DataUrl) {
 async function deleteThumbnail(thumbnailUrl) {
   if (!thumbnailUrl) return;
   try {
-    // Extract path from URL: .../object/public/scan-thumbnails/{path}
     const marker = `/object/public/${BUCKET}/`;
-    const idx    = thumbnailUrl.indexOf(marker);
+    const idx = thumbnailUrl.indexOf(marker);
     if (idx === -1) return;
     const path = thumbnailUrl.slice(idx + marker.length);
     await supabase.storage.from(BUCKET).remove([path]);
@@ -108,7 +116,11 @@ async function ensureDefaultFolder(userId) {
 
 export async function loadHistory() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) throw new Error('Not authenticated');
+  // DEV: skip auth check so history tab is browsable without an account
+  if (!session?.user) {
+    if (import.meta.env.DEV) return { folders: [] };
+    throw new Error('Not authenticated');
+  }
   await ensureDefaultFolder(session.user.id);
   return fetchHistory();
 }

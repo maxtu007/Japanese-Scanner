@@ -9,7 +9,13 @@ class Gunzip {
     this._data = data;
   }
   decompress() {
-    return ungzip(this._data);
+    try {
+      return ungzip(this._data);
+    } catch (e) {
+      // Browser transparently decompressed the .gz via Content-Encoding: gzip
+      // (common in Vite dev server). Data is already raw — return it directly.
+      return this._data;
+    }
   }
 }
 

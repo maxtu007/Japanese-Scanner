@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  loadHistory,
   createFolder,
   renameFolder,
   deleteFolder,
@@ -24,21 +23,19 @@ function getAllScans(history) {
   );
 }
 
-export default function HistoryTab({ onOpenScan }) {
+export default function HistoryTab({ history, onHistoryChange, onOpenScan }) {
   const { user } = useAuth();
-  const [history, setHistory] = useState({ folders: [] });
   const [expandedFolders, setExpandedFolders] = useState(new Set());
 
+  // Auto-expand the default folder whenever history first populates
   useEffect(() => {
-    loadHistory().then(h => {
-      setHistory(h);
-      // Auto-expand the default folder
-      const def = h.folders.find(f => f.isDefault) ?? h.folders[0];
-      if (def) setExpandedFolders(new Set([def.id]));
-    }).catch(err => {
-      console.error('[history] loadHistory failed:', err.message);
+    if (history.folders.length === 0) return;
+    setExpandedFolders(prev => {
+      if (prev.size > 0) return prev; // already set
+      const def = history.folders.find(f => f.isDefault) ?? history.folders[0];
+      return def ? new Set([def.id]) : prev;
     });
-  }, []);
+  }, [history.folders]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Dialog state machine
@@ -48,7 +45,7 @@ export default function HistoryTab({ onOpenScan }) {
   const [inputValue, setInputValue] = useState('');
 
   function refresh(updated) {
-    setHistory(updated);
+    onHistoryChange(updated);
   }
 
   function toggleFolder(id) {
@@ -356,7 +353,7 @@ export default function HistoryTab({ onOpenScan }) {
       </div>
 
       {/* Sign-in nudge */}
-      {!user && (
+      {!user && !import.meta.env.DEV && (
         <div className="history-signin-nudge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
