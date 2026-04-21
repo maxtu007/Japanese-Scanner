@@ -667,11 +667,9 @@ body {
   -webkit-touch-callout: none;
 }
 
-/* Romaji mode: disable justify (causes tight/expanded variance that collides annotations)
-   and add fixed letter-spacing so each token has consistent breathing room */
+/* Romaji mode: disable justify (causes tight/expanded variance that collides annotations) */
 .text-line-romaji {
   text-align: left;
-  letter-spacing: 0.35em;
 }
 
 ruby {
@@ -686,10 +684,16 @@ rt {
   white-space: nowrap;
 }
 
-/* Romaji annotation: inline span (no display:inline-block) so line-height/baseline
-   stays identical to plain tokens. Annotation is absolute so it doesn't affect width. */
+/* Romaji token: inline-block with line-height:1 so height = font-size (22px).
+   vertical-align:baseline keeps text aligned with surrounding inline tokens.
+   bottom:100% on the annotation is then reliable (22px above the char box).
+   padding (not letter-spacing) gives breathing room so left:50% centers correctly. */
 .token-romaji {
+  display: inline-block;
   position: relative;
+  line-height: 1;
+  vertical-align: baseline;
+  padding: 0 0.3em;
 }
 
 .romaji-rt {
