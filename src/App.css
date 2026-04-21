@@ -667,6 +667,13 @@ body {
   -webkit-touch-callout: none;
 }
 
+/* Romaji mode: disable justify (causes tight/expanded variance that collides annotations)
+   and add fixed letter-spacing so each token has consistent breathing room */
+.text-line-romaji {
+  text-align: left;
+  letter-spacing: 0.35em;
+}
+
 ruby {
   ruby-align: center;
   -webkit-tap-highlight-color: transparent;

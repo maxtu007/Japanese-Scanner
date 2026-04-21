@@ -49,7 +49,7 @@ export default function TextDisplay({ tokenBlocks, onWordClick, showTranslations
           {block.sentences.map((sent, li) => {
             return (
               <div key={li} className="sentence-unit">
-                <p className="text-line">
+                <p className={`text-line${showRomaji ? ' text-line-romaji' : ''}`}>
                   {sent.tokens.map((token, ti) => (
                     <WordToken
                       key={ti}
