@@ -1,7 +1,7 @@
 import { Purchases } from '@revenuecat/purchases-capacitor';
 import { Capacitor } from '@capacitor/core';
 
-const RC_API_KEY = 'test_qpIvPPPqybGFCxfFDEXGSbWUEni';
+const RC_API_KEY = 'appl_vdYmBaYoRkUizRoxbdcgxQjZNsw';
 
 export function isNative() {
   return Capacitor.isNativePlatform();

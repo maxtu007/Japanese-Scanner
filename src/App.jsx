@@ -6,8 +6,8 @@ import AddToDeckModal from './components/AddToDeckModal';
 import FlashcardsTab from './components/FlashcardsTab';
 import HistoryTab from './components/HistoryTab';
 import AudioBar from './components/AudioBar';
-import SplashScreen from './components/SplashScreen';
 import OnboardingScreen from './components/OnboardingScreen';
+import FAQSheet from './components/FAQSheet';
 import PaywallScreen from './components/PaywallScreen';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './contexts/AuthContext';
@@ -18,7 +18,15 @@ import { tokenizeSentence, hasJapanese } from './utils/japanese';
 import { loadDecks } from './utils/supabaseDecks';
 import { addScan, loadHistory } from './utils/supabaseHistory';
 import { migrateLocalStorageToSupabase } from './utils/migrate';
-import { initPurchases, checkEntitlement } from './utils/purchases';
+import { initPurchases, checkEntitlement, restorePurchases, isNative } from './utils/purchases';
+import { Browser } from '@capacitor/browser';
+import { InAppReview } from '@capacitor-community/in-app-review';
+
+// ── Update these before App Store submission ───────────────────────────────────
+const SUPPORT_EMAIL = 'unblurai.app@gmail.com';
+const PRIVACY_URL   = 'https://japanese-scanner-production.up.railway.app/privacy';
+// FAQ_URL removed — FAQ is in-app (FAQSheet.jsx)
+const FOLLOW_URL    = 'https://instagram.com/unblur'; // TODO: update handle
 
 async function generateThumbnail(file) {
   // Use FileReader to get a data URL from the File directly.
@@ -58,6 +66,9 @@ export default function App() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [showFAQ, setShowFAQ] = useState(false);
 
   // Close auth modal when user becomes authenticated (e.g. after Google/Apple OAuth)
   useEffect(() => {
@@ -76,7 +87,47 @@ export default function App() {
       setDeleteLoading(false);
     }
   }
-  const [showSplash, setShowSplash] = useState(true);
+
+  async function handleRestorePurchase() {
+    if (!isNative()) return;
+    setRestoreLoading(true);
+    try {
+      const hasPremium = await restorePurchases();
+      if (hasPremium) {
+        localStorage.setItem('unblur-paywall-seen', '1');
+        setShowPaywall(false);
+        setToastMsg('Purchases restored!');
+      } else {
+        setToastMsg('No previous purchases found.');
+      }
+    } catch (e) {
+      setError(e.message || 'Failed to restore purchases.');
+    } finally {
+      setRestoreLoading(false);
+    }
+    setTimeout(() => setToastMsg(null), 3000);
+  }
+
+  async function handleRateApp() {
+    if (isNative()) await InAppReview.requestReview();
+  }
+
+  async function handleShareApp() {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Unblur',
+        text: 'Scan and understand Japanese text instantly!',
+      });
+    }
+  }
+
+  async function openBrowser(url) {
+    if (isNative()) {
+      await Browser.open({ url });
+    } else {
+      window.open(url, '_blank');
+    }
+  }
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('unblur-onboarded')
   );
@@ -333,10 +384,6 @@ export default function App() {
       })()
     : false;
 
-  if (showSplash) {
-    return <SplashScreen onDone={() => setShowSplash(false)} />;
-  }
-
   if (showOnboarding) {
     return (
       <>
@@ -501,21 +548,21 @@ export default function App() {
                   {/* Support */}
                   <p className="acct-section-label">SUPPORT</p>
                   <div className="acct-group">
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={() => setShowFAQ(true)}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5" strokeLinecap="round"/></svg></span>
                       <span className="acct-row-text">FAQ</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={() => { window.location.href = 'mailto:' + SUPPORT_EMAIL; }}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
                       <span className="acct-row-text">Email Support</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={restoreLoading ? undefined : handleRestorePurchase} disabled={restoreLoading}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg></span>
-                      <span className="acct-row-text">Restore Purchase</span>
+                      <span className="acct-row-text">{restoreLoading ? 'Restoring…' : 'Restore Purchase'}</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
@@ -525,7 +572,7 @@ export default function App() {
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={() => openBrowser(PRIVACY_URL)}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                       <span className="acct-row-text">Privacy Policy</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -535,19 +582,19 @@ export default function App() {
                   {/* Stay in Touch */}
                   <p className="acct-section-label">STAY IN TOUCH</p>
                   <div className="acct-group">
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={handleRateApp}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
                       <span className="acct-row-text">Rate the App</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={handleShareApp}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
                       <span className="acct-row-text">Share the App</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div className="acct-divider"/>
-                    <button className="acct-row">
+                    <button className="acct-row" onClick={() => openBrowser(FOLLOW_URL)}>
                       <span className="acct-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth="2.5" strokeLinecap="round"/></svg></span>
                       <span className="acct-row-text">Follow Us</span>
                       <svg className="acct-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -637,6 +684,13 @@ export default function App() {
         </div>
       )}
 
+      {toastMsg && (
+        <div className="error-banner" style={{background:'rgba(52,199,89,0.95)'}} role="status">
+          <span>{toastMsg}</span>
+          <button onClick={() => setToastMsg(null)} aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
       {selectedToken && (
         <WordModal
           token={selectedToken.token}
@@ -650,6 +704,8 @@ export default function App() {
       {showAuth && (
         <AuthModal onClose={() => setShowAuth(false)} />
       )}
+
+      {showFAQ && <FAQSheet onClose={() => setShowFAQ(false)} />}
 
       {/* About modal */}
       {showAbout && (

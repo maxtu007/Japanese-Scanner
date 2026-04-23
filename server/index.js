@@ -321,6 +321,11 @@ app.delete('/api/account', requireAuth, async (req, res) => {
   }
 });
 
+// ── Privacy policy ────────────────────────────────────────────────────────────
+app.get('/privacy', (_req, res) => {
+  res.sendFile(join(__dirname, 'privacy.html'));
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.use(express.static(join(__dirname, '../dist')));
 
